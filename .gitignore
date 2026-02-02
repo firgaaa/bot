@@ -1,0 +1,20 @@
+# Fichiers sensibles (tokens, mots de passe)
+*.env
+staff.env
+.env.local
+*.env.local
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Rust (déjà dans api/.gitignore mais au cas où)
+target/
