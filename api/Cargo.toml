@@ -1,0 +1,21 @@
+[package]
+name = "clemser_kfc_api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4.12.1"
+base64 = "0.22.1"
+chrono = { version = "0.4.42", features = ["serde"] }
+diesel = { version = "2.3.5", features = ["postgres" , "chrono"] }
+dotenv = "0.15.0"
+env_logger = "0.11.8"
+futures = "0.3.31"
+lazy_static = "1.5.0"
+log = "0.4.29"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
+wreq = { version = "5.3.0", features = ["json"] }
+wreq-util = { version = "2.2.6", features = ["emulation-rand"] }
+diesel-async = { version = "0.7.4", features = ["postgres"] }
+tokio = { version = "1.49.0", features = ["rt-multi-thread"] }
