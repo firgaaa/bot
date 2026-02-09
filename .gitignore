@@ -1,5 +1,6 @@
 # Fichiers sensibles (tokens, mots de passe)
 *.env
+value.env
 staff.env
 .env.local
 *.env.local

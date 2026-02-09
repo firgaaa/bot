@@ -3,7 +3,7 @@ use crate::errors::AppError;
 #[derive(Debug, serde::Serialize, serde::Deserialize, Default)]
 pub struct KfcResponse {
     #[serde(rename = "customerId")]
-    pub customer_id: String,
+    pub customer_id: Option<String>,
     pub id: String,
     #[serde(rename = "loyaltyPoints")]
     pub loyalty_points: i32,

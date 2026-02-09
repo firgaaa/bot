@@ -10,6 +10,10 @@ mod recheck;
 mod schema;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Charger value.env à la racine du projet, puis .env local en secours
+    let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let value_env = manifest_dir.join("..").join("value.env");
+    dotenv::from_path(&value_env).ok();
     dotenv::dotenv().ok();
     env_logger::init();
     log::info!("Starting clemser_kfc_api...");

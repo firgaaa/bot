@@ -1,5 +1,6 @@
 use actix_web::Error;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use base64::Engine;
 use futures::Future;
 use futures::future::{Ready, ok};
 use lazy_static::lazy_static;
@@ -65,7 +66,7 @@ where
                     if let Ok(auth_str) = auth_header.to_str() {
                         if auth_str.starts_with("Basic ") {
                             let token = &auth_str[6..];
-                            if let Ok(decoded) = base64::decode(token) {
+                            if let Ok(decoded) = base64::engine::general_purpose::STANDARD.decode(token) {
                                 if let Ok(credentials) = String::from_utf8(decoded) {
                                     let parts: Vec<&str> = credentials.splitn(2, ':').collect();
                                     if parts.len() == 2 {

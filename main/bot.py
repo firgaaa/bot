@@ -18,11 +18,18 @@ import asyncio
 from threading import Lock
 import requests
 import base64
+import hashlib
+import hmac
 import json
 from io import BytesIO
 import qrcode
 from PIL import Image
 import numpy as np
+import math
+import re
+
+from creation_log import create_account
+from injecteur_log import inject
 
 # Monkey patch pour gérer les erreurs d'encodage dans les messages d'erreur PostgreSQL
 # PostgreSQL sur Windows peut envoyer des messages en Windows-1252
@@ -61,9 +68,12 @@ from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 from telegram.error import TelegramError, TimedOut, NetworkError, RetryAfter
+from telegram.request import HTTPXRequest
 
-# Charger les variables d'environnement depuis staff.env
-load_dotenv("staff.env")
+# Charger les variables d'environnement depuis value.env (ou staff.env en secours)
+ROOT_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(ROOT_DIR / "value.env")
+load_dotenv(ROOT_DIR / "staff.env")  # secours si value.env absent
 
 
 # Configuration du logging
@@ -86,11 +96,75 @@ except ValueError as e:
     SELLER_ID: Final[int] = 0
 
 # Constantes - Configuration des points (valeurs par défaut)
-DEFAULT_POINT_PRICE_PER_10: Final[float] = 0.03  # Prix pour 10 points en euros (par défaut)
 DEFAULT_POINT_MIN: Final[int] = 150  # Minimum de points (par défaut)
 DEFAULT_POINT_MAX: Final[int] = 2500  # Maximum de points (par défaut)
 POINT_INCREMENT: Final[int] = 50  # Palier de points (fixe)
 DEFAULT_CARD_MARGIN: Final[int] = 300  # Marge par défaut pour l'achat de cartes (points supplémentaires)
+
+# Table de prix par palier (prix pour 1 point, en euros)
+# La clé représente le palier minimum de points atteint.
+PRICE_TABLE: Final[Dict[int, float]] = {
+    1: 0.005000,
+    1100: 0.004850,
+    1200: 0.004740,
+    1250: 0.004700,
+    1300: 0.004615,
+    1350: 0.004500,
+    1400: 0.004428,
+    1600: 0.004300,
+    2000: 0.004220,
+    2100: 0.004150,
+    2150: 0.004100,
+    2200: 0.004050,
+    2250: 0.004000,
+    2300: 0.003940,
+    2350: 0.003893,
+    2400: 0.003820,
+    2500: 0.003800,
+    3000: 0.003780,
+    3500: 0.003760,
+    4000: 0.003740,
+    5000: 0.003725,
+    6000: 0.003700,
+    7000: 0.003650,
+    8000: 0.003625,
+    9000: 0.003624,
+    10000: 0.003623,
+    11000: 0.003622,
+    12000: 0.003621,
+    13000: 0.003620,
+    14000: 0.003619,
+    15000: 0.003618,
+    16000: 0.003617,
+    17000: 0.003616,
+    18000: 0.003615,
+    19000: 0.003614,
+    20000: 0.003613,
+    21000: 0.003612,
+    22000: 0.003611,
+    23000: 0.003610,
+    24000: 0.003609,
+    25000: 0.003608,
+    26000: 0.003607,
+    27000: 0.003606,
+    29000: 0.003605,
+    30000: 0.003604,
+    31000: 0.003603,
+    32000: 0.003602,
+    33000: 0.003601,
+    34000: 0.003600,
+}
+
+# Formules d'achat de points : libellé -> points par défaut pour l'interface +/-
+POINTS_FORMULA_DEFAULTS: Final[Dict[str, int]] = {
+    "solo": 1000,
+    "duo": 2500,
+    "petit_groupe": 4000,
+    "gros_groupe": 8000,
+    "revendeur": 10000,
+}
+
+
 
 # Configuration PostgreSQL local
 DB_HOST: Final[str] = os.getenv('DB_HOST', 'localhost')
@@ -104,6 +178,21 @@ KFC_API_URL: Final[str] = os.getenv('KFC_API_URL', 'http://localhost:8080')
 KFC_API_USERNAME: Final[str] = os.getenv('KFC_API_USERNAME', '')
 KFC_API_PASSWORD: Final[str] = os.getenv('KFC_API_PASSWORD', '')
 KFC_STORAGE_TABLE: Final[str] = os.getenv('KFC_STORAGE_TABLE', 'kfc_storage')
+
+# Mapping des clés config DB -> variables d'environnement (fallback si la DB n'a pas la clé)
+CONFIG_KEY_TO_ENV: Final[Dict[str, str]] = {
+    "point_min": "CONFIG_POINT_MIN",
+    "point_max": "CONFIG_POINT_MAX",
+    "card_margin": "CONFIG_CARD_MARGIN",
+    "payment_url": "CONFIG_PAYMENT_URL",
+    "staff_channel_id": "CONFIG_STAFF_CHANNEL_ID",
+    "staff_thread_payment": "CONFIG_STAFF_THREAD_PAYMENT",
+    "staff_thread_report": "CONFIG_STAFF_THREAD_REPORT",
+    "staff_thread_entretien": "CONFIG_STAFF_THREAD_ENTRETIEN",
+    "emergency_stop": "CONFIG_EMERGENCY_STOP",
+    "announcement_text": "CONFIG_ANNOUNCEMENT_TEXT",
+    "announcement_photo": "CONFIG_ANNOUNCEMENT_PHOTO",
+}
 
 DB_POOL: ThreadedConnectionPool | None = None
 
@@ -121,6 +210,8 @@ _profil_banner_file_id: Optional[str] = None
 _profil_banner_lock = Lock()
 _shop_banner_file_id: Optional[str] = None
 _shop_banner_lock = Lock()
+_points_banner_file_id: Optional[str] = None
+_points_banner_lock = Lock()
 
 def check_rate_limit(user_id: int, action: str, cooldown_seconds: float) -> bool:
     """
@@ -278,6 +369,20 @@ def init_database() -> None:
                     END IF;
                 END $$;
             """)
+
+            # Colonne token_publique pour les revendeurs (vendeur) : dérivé de user_id, non réversible
+            cursor.execute("""
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name = 'users' 
+                        AND column_name = 'token_publique'
+                    ) THEN
+                        ALTER TABLE users ADD COLUMN token_publique VARCHAR(64) DEFAULT '';
+                    END IF;
+                END $$;
+            """)
             
             # Créer la table config pour les paramètres configurables
             cursor.execute("""
@@ -342,11 +447,26 @@ def init_database() -> None:
                     END IF;
                 END $$;
             """)
-            
+
+            # Table historique des achats de cartes (numéro de carte, points, date — pas de QR)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS card_purchase_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    card_number VARCHAR(255) NOT NULL,
+                    points INTEGER NOT NULL CHECK (points > 0),
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                )
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_card_purchase_history_user_created
+                ON card_purchase_history (user_id, created_at DESC)
+            """)
+
             # Insérer les valeurs par défaut si elles n'existent pas
             now = datetime.now().isoformat()
             default_configs = [
-                ("point_price_per_10", str(DEFAULT_POINT_PRICE_PER_10), now),
                 ("point_min", str(DEFAULT_POINT_MIN), now),
                 ("point_max", str(DEFAULT_POINT_MAX), now),
                 ("card_margin", str(DEFAULT_CARD_MARGIN), now),  # Marge pour l'achat de cartes
@@ -369,6 +489,30 @@ def init_database() -> None:
             logger.info("Base de données PostgreSQL locale initialisée avec succès")
     except (psycopg2.Error, ValueError) as e:
         logger.error(f"Erreur lors de l'initialisation de la base de données: {e}")
+        raise
+
+
+def verify_bot_tables_exist() -> None:
+    """
+    Vérifie que les tables du bot existent (users, config, pending_payments, card_purchase_history).
+    À appeler au démarrage quand le schéma est géré par start.py.
+    Lève si une table manque (indiquer de lancer start.py).
+    """
+    required = ("users", "config", "pending_payments", "card_purchase_history")
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            for table in required:
+                cursor.execute(
+                    "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = %s",
+                    (table,),
+                )
+                if cursor.fetchone() is None:
+                    raise RuntimeError(
+                        f"Table '{table}' manquante. Lancez start.py pour créer les tables et appliquer les migrations."
+                    )
+    except (psycopg2.Error, ValueError) as e:
+        logger.error(f"Erreur vérification des tables: {e}")
         raise
 
 
@@ -675,6 +819,10 @@ async def insert_kfc_account(account_data: Dict[str, Any]) -> tuple[bool, Option
         elif response.status_code == 401:
             logger.error("Authentification API KFC échouée")
             return False, "Erreur d'authentification API", None
+        elif response.status_code == 409:
+            error_text = response.text.strip() if response.text else "La carte existe déjà"
+            logger.warning(f"Insert KFC échoué (409): {error_text}")
+            return False, error_text, None
         elif response.status_code == 500:
             error_text = response.text.strip() if response.text else "Erreur serveur"
             logger.error(f"Erreur API KFC (500): {error_text}")
@@ -842,7 +990,23 @@ async def generate_kfc_card(points: int) -> Optional[Dict[str, Any]]:
         )
         
         if response.status_code == 200:
-            card_data = response.json()
+            text = (response.text or "").strip()
+            if not text:
+                logger.warning(
+                    "API KFC /generate: réponse 200 avec corps vide (aucune carte ou erreur API). "
+                    "Vérifier le stock et les logs côté API."
+                )
+                return None
+            try:
+                card_data = response.json()
+            except json.JSONDecodeError as e:
+                preview = text[:200] if len(text) > 200 else text
+                logger.error(
+                    "API KFC /generate: réponse 200 mais corps non-JSON (status=%s, len=%s). "
+                    "Début du corps: %r. Erreur JSON: %s",
+                    response.status_code, len(response.text), preview, e,
+                )
+                return None
             actual_points = card_data.get('point', points)
             logger.info(f"Carte KFC générée avec succès: {card_data.get('id', 'N/A')} (demandé: {points} points, obtenu: {actual_points} points)")
             return card_data
@@ -883,11 +1047,11 @@ def generate_card_banner_image(carte: str) -> Optional[BytesIO]:
     carte = str(carte).strip()
 
     try:
-        # Configuration du QR code (identique à creer qr_code.py)
+        # Configuration du QR code (box_size réduit pour image plus légère)
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
-            box_size=10,
+            box_size=6,
             border=1,
         )
         qr.add_data(carte)
@@ -902,7 +1066,7 @@ def generate_card_banner_image(carte: str) -> Optional[BytesIO]:
         if not os.path.exists(banner_path):
             logger.warning("Bannière 'banniere_qrcode.png' introuvable, envoi du QR code seul.")
             buf = BytesIO()
-            qr_img.save(buf, format="PNG")
+            qr_img.save(buf, format="PNG", optimize=True)
             buf.seek(0)
             return buf
 
@@ -933,7 +1097,7 @@ def generate_card_banner_image(carte: str) -> Optional[BytesIO]:
         if len(x_coords) == 0:
             logger.warning("Marqueur magenta non trouvé dans la bannière, envoi du QR code seul.")
             buf = BytesIO()
-            qr_img.save(buf, format="PNG")
+            qr_img.save(buf, format="PNG", optimize=True)
             buf.seek(0)
             return buf
 
@@ -992,8 +1156,9 @@ def generate_card_banner_image(carte: str) -> Optional[BytesIO]:
         banner_copy = banner.copy()
         banner_copy.paste(qr_img_resized, (paste_x, paste_y))
 
+        # JPEG + qualité 88 = fichier plus léger qu'en PNG, qualité suffisante
         buf = BytesIO()
-        banner_copy.save(buf, format="PNG")
+        banner_copy.save(buf, format="JPEG", quality=88, optimize=True)
         buf.seek(0)
         return buf
 
@@ -1089,6 +1254,15 @@ def update_config_value(key: str, value: any) -> bool:
             value_str = str(value).strip()
             if value_str:
                 try:
+                    int(value_str)
+                except ValueError:
+                    logger.warning(f"ID de thread invalide (doit être un nombre): {value_str}")
+                    return False
+            value = value_str
+        elif key == "staff_thread_entretien":
+            value_str = str(value).strip()
+            if value_str:
+                try:
                     int(value_str)  # Vérifier que c'est un entier valide
                 except ValueError:
                     logger.warning(f"ID de thread invalide (doit être un nombre): {value_str}")
@@ -1136,11 +1310,6 @@ def update_config_value(key: str, value: any) -> bool:
         return False
 
 
-def get_point_price_per_10() -> float:
-    """Récupère le prix pour 10 points (avec cache)"""
-    return _get_cached_config("point_price_per_10", DEFAULT_POINT_PRICE_PER_10)
-
-
 def get_point_min() -> int:
     """Récupère le minimum de points (avec cache)"""
     return _get_cached_config("point_min", DEFAULT_POINT_MIN)
@@ -1149,6 +1318,43 @@ def get_point_min() -> int:
 def get_point_max() -> int:
     """Récupère le maximum de points (avec cache)"""
     return _get_cached_config("point_max", DEFAULT_POINT_MAX)
+
+
+def get_price_per_point(points: int) -> float:
+    """
+    Retourne le prix unitaire d'un point (en euros) en fonction du palier atteint.
+    Si le nombre de points est inférieur au plus petit palier, on utilise ce plus petit palier.
+    """
+    if points <= 0:
+        return 0.0
+    # Trouver le plus grand palier <= points
+    thresholds = [t for t in PRICE_TABLE.keys() if points >= t]
+    if thresholds:
+        threshold = max(thresholds)
+    else:
+        threshold = min(PRICE_TABLE.keys())
+    return PRICE_TABLE[threshold]
+
+
+def compute_points_price(points: int, user_reduction: float = 0.0) -> tuple[float, float]:
+    """
+    Calcule le prix avant et après réduction pour un nombre de points donné.
+    - Prix initial = points * prix par point (en fonction du palier)
+    - Prix final = prix initial * (1 - réduction/100)
+    Les deux sont arrondis au 0.05 € supérieur.
+    Retourne (price_initial, price_final).
+    """
+    if points <= 0:
+        return 0.0, 0.0
+
+    base_price = points * get_price_per_point(points)
+    # Arrondi au 0.05 € supérieur pour le prix initial
+    price_initial = math.ceil(base_price * 20) / 20
+
+    # Appliquer la réduction (facteur borné entre 0 et 1)
+    factor = max(0.0, 1.0 - user_reduction / 100.0)
+    price_final = math.ceil(price_initial * factor * 20) / 20
+    return price_initial, price_final
 
 
 def get_card_margin() -> int:
@@ -1188,6 +1394,17 @@ def get_staff_thread_payment() -> Optional[int]:
 def get_staff_thread_report() -> Optional[int]:
     """Récupère l'ID du thread de report dans le canal staff (avec cache)"""
     thread_id = _get_cached_config("staff_thread_report", "")
+    if thread_id:
+        try:
+            return int(thread_id)
+        except ValueError:
+            return None
+    return None
+
+
+def get_staff_thread_entretien() -> Optional[int]:
+    """Récupère l'ID du thread entretien dans le canal staff (upload cache bannières, etc.)"""
+    thread_id = _get_cached_config("staff_thread_entretien", "")
     if thread_id:
         try:
             return int(thread_id)
@@ -1432,6 +1649,158 @@ def get_pending_payments_count() -> int:
     except psycopg2.Error as e:
         logger.error(f"Erreur lors du comptage des transactions en attente: {e}")
         return 0
+
+
+def get_user_payment_history(user_id: int, limit: int = 5, offset: int = 0) -> list:
+    """
+    Récupère l'historique des achats acceptés d'un utilisateur (tri par date décroissante).
+    Retourne une liste de (id, points, created_at).
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, points, created_at
+                FROM pending_payments
+                WHERE user_id = %s AND status = 'accepted'
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            """, (user_id, limit, offset))
+            return cursor.fetchall()
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de la récupération de l'historique des achats: {e}")
+        return []
+
+
+def get_user_payment_history_count(user_id: int) -> int:
+    """Retourne le nombre total d'achats de points (acceptés) pour un utilisateur."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT COUNT(*) FROM pending_payments WHERE user_id = %s AND status = 'accepted'",
+                (user_id,)
+            )
+            result = cursor.fetchone()
+            return result[0] if result else 0
+    except psycopg2.Error as e:
+        logger.error(f"Erreur comptage historique points: {e}")
+        return 0
+
+
+def get_user_card_history_count(user_id: int) -> int:
+    """Retourne le nombre total d'achats de cartes pour un utilisateur."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM card_purchase_history WHERE user_id = %s", (user_id,))
+            result = cursor.fetchone()
+            return result[0] if result else 0
+    except psycopg2.Error as e:
+        logger.error(f"Erreur comptage historique cartes: {e}")
+        return 0
+
+
+def insert_card_purchase_history(user_id: int, card_number: str, points: int) -> bool:
+    """Enregistre un achat de carte dans l'historique (sans QR). Retourne True si OK."""
+    try:
+        card_number_safe = (str(card_number).strip() or "N/A")[:255]
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO card_purchase_history (user_id, card_number, points)
+                VALUES (%s, %s, %s)
+            """, (user_id, card_number_safe, max(1, int(points))))
+        return True
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de l'insertion dans card_purchase_history: {e}")
+        return False
+
+
+def get_user_card_history(user_id: int, limit: int = 5, offset: int = 0) -> list:
+    """
+    Récupère l'historique des achats de cartes d'un utilisateur (tri par date décroissante).
+    Retourne une liste de (id, card_number, points, created_at).
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, card_number, points, created_at
+                FROM card_purchase_history
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            """, (user_id, limit, offset))
+            return cursor.fetchall()
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de la récupération de l'historique des cartes: {e}")
+        return []
+
+
+def get_card_purchase_by_id(record_id: int) -> Optional[tuple]:
+    """Récupère un enregistrement d'historique carte par id. Retourne (id, user_id, card_number, points, created_at) ou None."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id, user_id, card_number, points, created_at
+                FROM card_purchase_history WHERE id = %s
+            """, (record_id,))
+            return cursor.fetchone()
+    except psycopg2.Error as e:
+        logger.error(f"Erreur get_card_purchase_by_id: {e}")
+        return None
+
+
+def _format_hist_date(created_at) -> str:
+    """Formate une date pour l'affichage bouton historique (JJ/MM)."""
+    try:
+        if hasattr(created_at, "strftime"):
+            return created_at.strftime("%d/%m")
+        d = str(created_at)[:10]
+        if len(d) >= 10:
+            dt = datetime.strptime(d[:10], "%Y-%m-%d")
+            return dt.strftime("%d/%m")
+        return "??/??"
+    except Exception:
+        return "??/??"
+
+
+def _build_hist_points_keyboard(rows: list, user_id: int, page: int, page_size: int) -> list:
+    """Construit le clavier pour une page de l'historique points. rows = [(id, points, created_at), ...]"""
+    keyboard = []
+    for (pid, points, created_at) in rows:
+        d = _format_hist_date(created_at)
+        keyboard.append([InlineKeyboardButton(f"{d} : {points} pts", callback_data=f"hist_points_detail_{pid}")])
+    next_rows = get_user_payment_history(user_id, limit=page_size, offset=(page + 1) * page_size)
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("◀ 5 suivantes", callback_data=f"hist_points_page_{page - 1}"))
+    if next_rows:
+        nav.append(InlineKeyboardButton("▶ 5 précédentes", callback_data=f"hist_points_page_{page + 1}"))
+    if nav:
+        keyboard.append(nav)
+    keyboard.append([InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")])
+    return keyboard
+
+
+def _build_hist_cartes_keyboard(rows: list, user_id: int, page: int, page_size: int) -> list:
+    """Construit le clavier pour une page de l'historique cartes. rows = [(id, card_number, points, created_at), ...]"""
+    keyboard = []
+    for (rid, card_number, points, created_at) in rows:
+        d = _format_hist_date(created_at)
+        keyboard.append([InlineKeyboardButton(f"{d} : {points} pts", callback_data=f"hist_cartes_detail_{rid}")])
+    next_rows = get_user_card_history(user_id, limit=page_size, offset=(page + 1) * page_size)
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("◀ 5 suivantes", callback_data=f"hist_cartes_page_{page - 1}"))
+    if next_rows:
+        nav.append(InlineKeyboardButton("▶ 5 précédentes", callback_data=f"hist_cartes_page_{page + 1}"))
+    if nav:
+        keyboard.append(nav)
+    keyboard.append([InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")])
+    return keyboard
 
 
 def reset_all_pending_payments() -> int:
@@ -1723,6 +2092,65 @@ def set_user_role(user_id: int, role: str) -> bool:
         return False
 
 
+def _get_token_public_secret() -> bytes:
+    """Secret pour dériver le token public (réversible uniquement avec ce secret)."""
+    secret = os.getenv("TOKEN_PUBLIC_SECRET") or os.getenv("BOT_TOKEN") or "default-secret"
+    return secret.encode("utf-8")
+
+
+def derive_public_token(user_id: int) -> str:
+    """
+    Dérive un token public à partir de l'id utilisateur (déterministe, non réversible sans le secret).
+    Une seule image : même user_id -> même token ; on ne peut pas retrouver user_id à partir du token.
+    10 caractères hex (16^10 possibilités) : risque de collision négligeable même avec ~10 000 revendeurs.
+    """
+    raw = hmac.new(
+        _get_token_public_secret(),
+        str(user_id).encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return raw[:10]
+
+
+def set_revendeur_public_token(user_id: int) -> bool:
+    """
+    Génère et enregistre le token public pour un revendeur (vendeur).
+    À appeler quand on attribue le rôle vendeur ou au démarrage pour les vendeurs sans token.
+    """
+    try:
+        token = derive_public_token(user_id)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET token_publique = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s AND role = %s",
+                (token, user_id, "vendeur"),
+            )
+            return cursor.rowcount > 0
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de l'enregistrement du token public pour user_id={user_id}: {e}")
+        return False
+
+
+def ensure_revendeur_tokens() -> None:
+    """
+    Vérifie que tous les utilisateurs avec le rôle vendeur ont un token_publique.
+    Appelé au démarrage du bot (après init des tables). Crée les tokens manquants.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT user_id FROM users WHERE role = %s AND (token_publique IS NULL OR token_publique = '')",
+                ("vendeur",),
+            )
+            rows = cursor.fetchall()
+        for (uid,) in rows:
+            if set_revendeur_public_token(uid):
+                logger.info(f"Token public créé pour le vendeur user_id={uid}")
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de la vérification des tokens revendeurs: {e}")
+
+
 def get_users_by_role(role: str) -> list[tuple[int, int]]:
     """Récupère la liste des utilisateurs avec un rôle spécifique (retourne [(user_id, balance), ...])"""
     if role not in ('user', 'vendeur', 'moderator'):
@@ -1841,16 +2269,20 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "cmd_stock",
         "cmd_user",
         "cmd_panel_vendeur",
-        "cmd_annonce",
-        "cmd_moi",
-        "cmd_acheter_points",
-        "cmd_boutique",
+            "cmd_annonce",
+            "cmd_moi",
+            "cmd_historique",
+            "hist_points",
+            "hist_cartes",
+            "cmd_acheter_points",
+            "cmd_boutique",
         "boutique_custom",
         "cmd_report",
         "cmd_calc",
         "points_inc",
         "points_dec",
         "points_validate",
+        "points_formula_choice",
         "config_points",
         "config_carte",
         "config_role",
@@ -1895,7 +2327,8 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "vendeur_reduction_skip",
         "user_list",
         "user_info",
-        "user_list_page"
+        "user_list_page",
+        "admin_create_account"
     }
     
     # Validation pour les callbacks avec paramètres (format: prefix_value)
@@ -1906,6 +2339,10 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
                 return True
         except (ValueError, IndexError):
             return False
+
+    if callback_data.startswith("points_formula_"):
+        suffix = callback_data.replace("points_formula_", "", 1)
+        return suffix == "choice" or suffix in POINTS_FORMULA_DEFAULTS
     
     if callback_data.startswith("payment_accept_") or callback_data.startswith("payment_refuse_"):
         try:
@@ -1949,7 +2386,23 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
                 return True
         except (ValueError, IndexError):
             return False
-    
+
+    if callback_data.startswith("hist_points_page_") or callback_data.startswith("hist_cartes_page_"):
+        try:
+            page = int(callback_data.split("_")[-1])
+            if page >= 0:
+                return True
+        except (ValueError, IndexError):
+            return False
+
+    if callback_data.startswith("hist_points_detail_") or callback_data.startswith("hist_cartes_detail_"):
+        try:
+            pid = int(callback_data.split("_")[-1])
+            if pid > 0:
+                return True
+        except (ValueError, IndexError):
+            return False
+
     return callback_data in allowed_callbacks
 
 
@@ -2077,48 +2530,71 @@ def format_header(title: str, emoji: str = "", separator_length: int = 21) -> st
     return format_header_rich(title, emoji, "primary", banner=False)
 
 
+async def _send_photo_for_banner_cache(bot, banner_path: str, caption: str):
+    """
+    Envoie une photo (bannière) pour obtenir un file_id Telegram.
+    Essaie d'abord le thread entretien du canal staff ; en cas d'erreur ou non configuré, envoie à l'admin.
+    Retourne le message envoyé (pour en extraire file_id et supprimer), ou None.
+    """
+    channel_id = get_staff_channel_id()
+    thread_id = get_staff_thread_entretien()
+    if channel_id and thread_id:
+        try:
+            with open(banner_path, 'rb') as photo:
+                channel_id_int = int(channel_id.strip().replace(" ", ""))
+                msg = await bot.send_photo(
+                    chat_id=channel_id_int,
+                    message_thread_id=thread_id,
+                    photo=photo,
+                    caption=caption,
+                )
+            return msg
+        except Exception as e:
+            logger.warning(f"Envoi bannière vers thread entretien échoué, fallback admin: {e}")
+    if ADMIN_ID:
+        try:
+            with open(banner_path, 'rb') as photo:
+                msg = await bot.send_photo(chat_id=ADMIN_ID, photo=photo, caption=caption)
+            return msg
+        except Exception as e:
+            logger.error(f"Envoi bannière vers admin échoué: {e}")
+    return None
+
+
 async def get_or_upload_profil_banner(context: ContextTypes.DEFAULT_TYPE) -> Optional[str]:
     """
     Récupère le file_id de la bannière profil (avec cache).
-    Upload une seule fois au premier appel, puis réutilise le file_id.
+    Upload une seule fois au premier appel (thread entretien ou admin), puis réutilise le file_id.
     """
     global _profil_banner_file_id
-    
-    # Si déjà en cache, retourner immédiatement (pas besoin de lock)
+
     if _profil_banner_file_id:
         return _profil_banner_file_id
-    
-    # Upload nécessaire - utiliser lock pour éviter les doubles uploads
+
     with _profil_banner_lock:
-        # Double-check après avoir acquis le lock
         if _profil_banner_file_id:
             return _profil_banner_file_id
-        
+
         banner_path = "banniere_profil.jpg"
         if not os.path.exists(banner_path):
             logger.warning(f"Bannière profil non trouvée: {banner_path}")
             return None
-        
+
         try:
-            with open(banner_path, 'rb') as photo:
-                admin_id = ADMIN_ID
-                if admin_id:
-                    message = await context.bot.send_photo(
-                        chat_id=admin_id,
-                        photo=photo,
-                        caption="Bannière profil (upload cache)"
-                    )
-                    _profil_banner_file_id = message.photo[-1].file_id
-                    logger.info(f"Bannière profil uploadée, file_id obtenu (longueur: {len(_profil_banner_file_id)})")
-                    # Supprimer le message de test
-                    try:
-                        await context.bot.delete_message(chat_id=admin_id, message_id=message.message_id)
-                    except:
-                        pass
-                    return _profil_banner_file_id
-                else:
-                    logger.error("ADMIN_ID non configuré, impossible d'uploader la bannière")
-                    return None
+            message = await _send_photo_for_banner_cache(
+                context.bot, banner_path, "Bannière profil (upload cache)"
+            )
+            if message:
+                _profil_banner_file_id = message.photo[-1].file_id
+                logger.info(f"Bannière profil uploadée, file_id obtenu (longueur: {len(_profil_banner_file_id)})")
+                try:
+                    await context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
+                except Exception:
+                    pass
+                return _profil_banner_file_id
+            if not ADMIN_ID:
+                logger.error("ADMIN_ID non configuré, impossible d'uploader la bannière")
+            return None
         except Exception as e:
             logger.error(f"Erreur lors de l'upload de la bannière profil: {e}")
             return None
@@ -2147,27 +2623,61 @@ async def get_or_upload_shop_banner(context: ContextTypes.DEFAULT_TYPE) -> Optio
             return None
         
         try:
-            with open(banner_path, 'rb') as photo:
-                admin_id = ADMIN_ID
-                if admin_id:
-                    message = await context.bot.send_photo(
-                        chat_id=admin_id,
-                        photo=photo,
-                        caption="Bannière shop (upload cache)"
-                    )
-                    _shop_banner_file_id = message.photo[-1].file_id
-                    logger.info(f"Bannière shop uploadée, file_id obtenu (longueur: {len(_shop_banner_file_id)})")
-                    # Supprimer le message de test
-                    try:
-                        await context.bot.delete_message(chat_id=admin_id, message_id=message.message_id)
-                    except:
-                        pass
-                    return _shop_banner_file_id
-                else:
-                    logger.error("ADMIN_ID non configuré, impossible d'uploader la bannière")
-                    return None
+            message = await _send_photo_for_banner_cache(
+                context.bot, banner_path, "Bannière shop (upload cache)"
+            )
+            if message:
+                _shop_banner_file_id = message.photo[-1].file_id
+                logger.info(f"Bannière shop uploadée, file_id obtenu (longueur: {len(_shop_banner_file_id)})")
+                try:
+                    await context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
+                except Exception:
+                    pass
+                return _shop_banner_file_id
+            if not ADMIN_ID:
+                logger.error("ADMIN_ID non configuré, impossible d'uploader la bannière")
+            return None
         except Exception as e:
             logger.error(f"Erreur lors de l'upload de la bannière shop: {e}")
+            return None
+
+
+async def get_or_upload_points_banner(context: ContextTypes.DEFAULT_TYPE) -> Optional[str]:
+    """
+    Récupère le file_id de la bannière page formules / achat de points (avec cache).
+    Utilisée uniquement sur la page de choix de formule ; pas conservée au retour ou à la page suivante.
+    """
+    global _points_banner_file_id
+
+    if _points_banner_file_id:
+        return _points_banner_file_id
+
+    with _points_banner_lock:
+        if _points_banner_file_id:
+            return _points_banner_file_id
+
+        banner_path = "banniere_point.jpg"
+        if not os.path.exists(banner_path):
+            logger.warning(f"Bannière points non trouvée: {banner_path}")
+            return None
+
+        try:
+            message = await _send_photo_for_banner_cache(
+                context.bot, banner_path, "Bannière points (upload cache)"
+            )
+            if message:
+                _points_banner_file_id = message.photo[-1].file_id
+                logger.info(f"Bannière points uploadée, file_id obtenu (longueur: {len(_points_banner_file_id)})")
+                try:
+                    await context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
+                except Exception:
+                    pass
+                return _points_banner_file_id
+            if not ADMIN_ID:
+                logger.error("ADMIN_ID non configuré, impossible d'uploader la bannière points")
+            return None
+        except Exception as e:
+            logger.error(f"Erreur lors de l'upload de la bannière points: {e}")
             return None
 
 
@@ -2192,8 +2702,9 @@ def require_role_for_callback(role: str, callback_data: str) -> bool:
         "config_max_edit",
         "config_payment_url_edit",
         "config_staff_channel_edit",
-        "config_staff_thread_payment_edit",
-        "config_staff_thread_report_edit",
+    "config_staff_thread_payment_edit",
+    "config_staff_thread_report_edit",
+    "config_staff_thread_entretien_edit",
     }
     admin_only_prefixes = (
         "payment_accept_",
@@ -2540,11 +3051,14 @@ async def handle_card_purchase(update: Update, context: ContextTypes.DEFAULT_TYP
         except TelegramError as e:
             logger.error(f"Erreur lors de l'affichage du message d'erreur transaction: {e}")
         return
-    
-    # Succès : afficher les informations de la carte
+
+    # Enregistrer l'achat dans l'historique des cartes (sans QR)
     card_id = card_data.get('id', 'N/A')
     card_number = card_data.get('carte', 'N/A')
     card_points = card_data.get('point', points)
+    insert_card_purchase_history(user_id, str(card_number), int(card_points))
+    
+    # Succès : afficher les informations de la carte
     
     # Construire le message avec uniquement carte et points (comme demandé)
     success_header = format_header_rich("ACHAT RÉUSSI", "", "success", banner=False)
@@ -2649,6 +3163,7 @@ async def show_boutique_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
     message = f"{header}\n\n{balance_section}\n\n{intro_section}\n"
     
     keyboard = [
+        [InlineKeyboardButton("💰 600 points", callback_data="boutique_points_600")],
         [InlineKeyboardButton("💰 800 points", callback_data="boutique_points_800")],
         [InlineKeyboardButton("💰 1000 points", callback_data="boutique_points_1000")],
         [InlineKeyboardButton("💰 1200 points", callback_data="boutique_points_1200")],
@@ -2705,6 +3220,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         keyboard = [
             # Catégorie principale - SHOP (orange)
             [InlineKeyboardButton("🛒 Shop", callback_data="cmd_shop")],
+            [InlineKeyboardButton("🆕 Créer un compte", callback_data="admin_create_account")],
             # Catégorie Admin - GESTION (bleu)
             [
                 InlineKeyboardButton("⚙️ Config", callback_data="cmd_config"),
@@ -2738,6 +3254,39 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         logger.error(f"Erreur lors de l'affichage du menu principal: {e}")
 
 
+async def show_points_formula_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Affiche le choix de formule (solo, duo, etc.) avant l'interface +/- d'achat de points."""
+    if not update.effective_user:
+        logger.warning("show_points_formula_choice appelé sans utilisateur valide")
+        return
+
+    header = format_header_rich("ACHAT DE POINTS", "💰", "orange", banner=False)
+    intro = format_section_rich(
+        "Choisissez une formule",
+        "Sélectionnez le type d'achat pour partir avec une quantité de points adaptée. Vous pourrez ensuite ajuster !",
+        "✨",
+        "orange"
+    )
+    message = f"{header}\n\n{intro}"
+
+    keyboard = [
+        [InlineKeyboardButton("Solo", callback_data="points_formula_solo")],
+        [InlineKeyboardButton("Duo", callback_data="points_formula_duo")],
+        [InlineKeyboardButton("Petit groupe", callback_data="points_formula_petit_groupe")],
+        [InlineKeyboardButton("Gros groupe", callback_data="points_formula_gros_groupe")],
+        [InlineKeyboardButton("Revendeur", callback_data="points_formula_revendeur")],
+        [InlineKeyboardButton("🔙 Retour au shop", callback_data="cmd_shop")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    try:
+        file_id = await get_or_upload_points_banner(context)
+        await edit_or_send_message(update, message, reply_markup, "HTML", file_id)
+    except TelegramError as e:
+        if "message is not modified" not in str(e).lower():
+            logger.error(f"Erreur lors de l'affichage du choix de formule: {e}")
+
+
 async def show_points_purchase_interface(update: Update, context: ContextTypes.DEFAULT_TYPE, selected_points: int = None) -> None:
     """Affiche l'interface d'achat de points avec les boutons +/-"""
     if not update.effective_user:
@@ -2749,7 +3298,6 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     # Utiliser les valeurs de configuration
     point_min = get_point_min()
     point_max = get_point_max()
-    point_price = get_point_price_per_10()
     
     # Initialiser avec le minimum si non spécifié
     if selected_points is None:
@@ -2758,40 +3306,51 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     # Limiter aux bornes
     selected_points = max(point_min, min(point_max, selected_points))
     
-    # Calculer le prix
-    point_price = get_point_price_per_10()
-    price_initial = (selected_points / 10) * point_price
-    
-    # Appliquer la réduction de l'utilisateur
+    # Appliquer la réduction de l'utilisateur et calculer le prix
     user_reduction = get_user_reduction(user_id)
-    price_euros = price_initial * (1 - user_reduction / 100)
+    price_initial, price_euros = compute_points_price(selected_points, user_reduction)
+    price_per_point = get_price_per_point(selected_points)
+    base_unit_price = 0.005  # Prix de base de référence pour 1 point
+    if price_per_point > 0:
+        # Montant réellement payé pour un panier "théorique" de 100€ au tarif de base,
+        # en se basant sur le prix unitaire actuel par rapport au prix de base.
+        effective_100 = 100 * (price_per_point / base_unit_price)
+    else:
+        effective_100 = 100.0
     
     # Construire le message avec le nouveau système esthétique
-    header = format_header_rich("ACHAT DE POINTS", "💰", "orange", banner=False)
+    header = format_header_rich("ACHAT DE POINTS 💰", "💰", "orange", banner=False)
     
     # Section sélection mise en évidence
-    selection_box = format_highlight_box(f"{selected_points} points", "📊", "orange")
+    selection_box = format_section_rich(
+        "RESUMER",
+        "",
+        "📊",
+        "info"
+    )
     
     # Section prix mise en évidence
     if user_reduction > 0:
-        price_box = format_highlight_box(f"{price_euros:.2f} €", "💵", "gold")
-        reduction_info = f"\n\n💡 Prix initial: {price_initial:.2f} €"
+        price_box = f"<b>- Total : </b>{price_euros:.2f} €"
+        reduction_info = f"\n<b>- Prix initial : </b>{price_initial:.2f} €"
     else:
-        price_box = format_highlight_box(f"{price_euros:.2f} €", "💵", "gold")
+        price_box = f"<b>- Total : </b>{price_euros:.2f} €"
         reduction_info = ""
     
     # Informations en section normale
+    info_text = (
+        f"💡 Si tu achetais l'équivalent de 100€ au tarif de base , "
+        f"avec ton tarif actuel tu paye : <b>{effective_100:.2f}€</b>\n\n"
+        f"<i>Utilisez les boutons ci-dessous pour ajuster</i>"
+    )
     info_section = format_section_rich(
         "Informations",
-        f"📦 Palier : <b>{POINT_INCREMENT} points</b>\n"
-        f"📊 Min: <b>{point_min}</b> | Max: <b>{point_max}</b>\n"
-        f"💶 Prix : <b>{point_price:.2f}€</b> pour 10 points\n\n"
-        f"<i>Utilisez les boutons ci-dessous pour ajuster</i>",
+        info_text,
         "ℹ️",
         "info"
     )
     
-    message = f"{header}\n\n{selection_box}\n\n{price_box}{reduction_info}\n\n{info_section}"
+    message = f"{header}\n\n\n{selection_box}\n- <b>{selected_points} points</b>\n{price_box}{reduction_info}\n\n{info_section}"
     
     # Boutons organisés visuellement
     keyboard = [
@@ -2800,17 +3359,17 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
             InlineKeyboardButton("➕ +50", callback_data=f"points_inc_{selected_points}")
         ],
         [InlineKeyboardButton("✅ Valider l'achat", callback_data=f"points_validate_{selected_points}")],
-        [InlineKeyboardButton("🔙 Retour au shop", callback_data="cmd_shop")]
+        [
+            InlineKeyboardButton("🔙 Autre formule", callback_data="points_formula_choice"),
+            InlineKeyboardButton("🔙 Retour au shop", callback_data="cmd_shop")
+        ],
     ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     try:
-        if update.message:
-            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode="HTML")
-        elif update.callback_query:
-            await safe_edit_message_text(update.callback_query, message, reply_markup, "HTML")
-        
+        file_id = await get_or_upload_points_banner(context)
+        await edit_or_send_message(update, message, reply_markup, "HTML", file_id)
         logger.info(f"Interface d'achat de points affichée pour l'utilisateur {user_id} ({selected_points} points)")
     except TelegramError as e:
         # Gérer silencieusement MessageNotModified (clic trop rapide)
@@ -2998,10 +3557,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     # Gestion des retours au menu
     if callback_data == "menu_principal" or callback_data == "cmd_start":
+        context.user_data.pop(f'boutique_custom_{user_id}', None)
         await show_main_menu(update, context)
         return
     
     if callback_data == "cmd_shop":
+        context.user_data.pop(f'boutique_custom_{user_id}', None)
         await show_shop_menu(update, context)
         return
     
@@ -3048,6 +3609,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     # Gestion de la boutique (achat de cartes KFC)
     if callback_data == "cmd_boutique":
+        context.user_data.pop(f'boutique_custom_{user_id}', None)  # Annuler le mode saisie manuelle
         await show_boutique_menu(update, context, user_id)
         return
     
@@ -3165,7 +3727,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         balance = get_user_balance(user_id)
         first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "N/A"
         username = escape_html(user.username or 'N/A')
-        point_price = get_point_price_per_10()
         
         # Construire le message avec le nouveau système esthétique
         header = format_header_rich("MON PROFIL", "👤", "purple", banner=False)
@@ -3182,22 +3743,207 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         solde_box = format_highlight_box(f"{balance} points", "💎", "gold")
         
         message = f"{header}\n\n{info_section}\n{info_content}\n\n{solde_box}"
-        keyboard = create_back_button("shop")
-        
+        keyboard = [
+            [InlineKeyboardButton("📜 Historique", callback_data="cmd_historique")],
+            [InlineKeyboardButton("🔙 Retour au shop", callback_data="cmd_shop")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
         # Utiliser la fonction helper pour gérer les transitions et changements de bannière
         try:
             file_id = await get_or_upload_profil_banner(context)
-            await edit_or_send_message(update, message, keyboard, "HTML", file_id)
-            
+            await edit_or_send_message(update, message, reply_markup, "HTML", file_id)
+
             if file_id:
                 logger.info(f"Profil affiché avec bannière pour l'utilisateur {user_id}")
             else:
                 logger.info(f"Profil affiché (texte) pour l'utilisateur {user_id}")
-            
+
         except TelegramError as e:
             logger.error(f"Erreur lors de l'affichage du profil: {e}")
         return
-    
+
+    # Gestion de "Historique" (profil) — choix entre points ou cartes
+    if callback_data == "cmd_historique":
+        header = format_header_rich("HISTORIQUE", "📜", "purple", banner=False)
+        msg = f"{header}\n\nChoisissez le type d'historique à consulter."
+        keyboard = [
+            [InlineKeyboardButton("💰 Historique points", callback_data="hist_points")],
+            [InlineKeyboardButton("🎴 Historique cartes", callback_data="hist_cartes")],
+            [InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage choix historique: {e}")
+        return
+
+    # ——— Historique POINTS (achats de points) ———
+    if callback_data == "hist_points":
+        PAGE_SIZE = 5
+        context.user_data["hist_points_page"] = 0
+        total = get_user_payment_history_count(user_id)
+        rows = get_user_payment_history(user_id, limit=PAGE_SIZE, offset=0)
+        header = format_header_rich("HISTORIQUE POINTS", "💰", "purple", banner=False)
+        count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
+        if not rows:
+            msg = f"{header}\n\nAucun achat de points enregistré."
+            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
+        else:
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail (date, points, prix)."
+            keyboard = _build_hist_points_keyboard(rows, user_id, page=0, page_size=PAGE_SIZE)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage historique points: {e}")
+        return
+
+    if callback_data.startswith("hist_points_page_"):
+        try:
+            page = int(callback_data.replace("hist_points_page_", "", 1))
+        except (ValueError, IndexError):
+            await query.answer("Erreur pagination.", show_alert=True)
+            return
+        PAGE_SIZE = 5
+        context.user_data["hist_points_page"] = page
+        offset = page * PAGE_SIZE
+        total = get_user_payment_history_count(user_id)
+        rows = get_user_payment_history(user_id, limit=PAGE_SIZE, offset=offset)
+        header = format_header_rich("HISTORIQUE POINTS", "💰", "purple", banner=False)
+        count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
+        if not rows:
+            msg = f"{header}{count_line}\nAucune commande sur cette page."
+            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
+        else:
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail."
+            keyboard = _build_hist_points_keyboard(rows, user_id, page=page, page_size=PAGE_SIZE)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage historique points page: {e}")
+        return
+
+    if callback_data.startswith("hist_points_detail_"):
+        try:
+            payment_id = int(callback_data.replace("hist_points_detail_", "", 1))
+        except (ValueError, IndexError):
+            await query.answer("Commande introuvable.", show_alert=True)
+            return
+        payment = get_pending_payment(payment_id)
+        if not payment or payment[1] != user_id:
+            await query.answer("Commande introuvable.", show_alert=True)
+            return
+        _id, _user_id, points, price, photo_file_id, created_at, status, conf_msg_id = payment
+        try:
+            if hasattr(created_at, "strftime"):
+                date_exact = created_at.strftime("%d/%m/%Y à %H:%M")
+            else:
+                date_exact = str(created_at)[:16].replace("T", " ")
+        except Exception:
+            date_exact = str(created_at)
+        price_str = f"{price:.2f}€" if price is not None else "—"
+        page = context.user_data.get("hist_points_page", 0)
+        header = format_header_rich("DÉTAIL COMMANDE POINTS", "💰", "purple", banner=False)
+        detail_msg = (
+            f"{header}\n\n"
+            f"📅 <b>Date :</b> {escape_html(str(date_exact))}\n"
+            f"💎 <b>Points :</b> {points}\n"
+            f"💳 <b>Prix :</b> {price_str}"
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Retour à la liste", callback_data=f"hist_points_page_{page}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, detail_msg, reply_markup, "HTML")
+            await query.answer()
+        except TelegramError as e:
+            logger.error(f"Erreur affichage détail historique points: {e}")
+        return
+
+    # ——— Historique CARTES ———
+    if callback_data == "hist_cartes":
+        PAGE_SIZE = 5
+        context.user_data["hist_cartes_page"] = 0
+        total = get_user_card_history_count(user_id)
+        rows = get_user_card_history(user_id, limit=PAGE_SIZE, offset=0)
+        header = format_header_rich("HISTORIQUE CARTES", "🎴", "purple", banner=False)
+        count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
+        if not rows:
+            msg = f"{header}\n\nAucun achat de carte enregistré."
+            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
+        else:
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail (carte, points, date)."
+            keyboard = _build_hist_cartes_keyboard(rows, user_id, page=0, page_size=PAGE_SIZE)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage historique cartes: {e}")
+        return
+
+    if callback_data.startswith("hist_cartes_page_"):
+        try:
+            page = int(callback_data.replace("hist_cartes_page_", "", 1))
+        except (ValueError, IndexError):
+            await query.answer("Erreur pagination.", show_alert=True)
+            return
+        PAGE_SIZE = 5
+        context.user_data["hist_cartes_page"] = page
+        offset = page * PAGE_SIZE
+        total = get_user_card_history_count(user_id)
+        rows = get_user_card_history(user_id, limit=PAGE_SIZE, offset=offset)
+        header = format_header_rich("HISTORIQUE CARTES", "🎴", "purple", banner=False)
+        count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
+        if not rows:
+            msg = f"{header}{count_line}\nAucune commande sur cette page."
+            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
+        else:
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail."
+            keyboard = _build_hist_cartes_keyboard(rows, user_id, page=page, page_size=PAGE_SIZE)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage historique cartes page: {e}")
+        return
+
+    if callback_data.startswith("hist_cartes_detail_"):
+        try:
+            record_id = int(callback_data.replace("hist_cartes_detail_", "", 1))
+        except (ValueError, IndexError):
+            await query.answer("Commande introuvable.", show_alert=True)
+            return
+        row = get_card_purchase_by_id(record_id)
+        if not row or row[1] != user_id:
+            await query.answer("Commande introuvable.", show_alert=True)
+            return
+        _id, _user_id, card_number, points, created_at = row
+        try:
+            if hasattr(created_at, "strftime"):
+                date_exact = created_at.strftime("%d/%m/%Y à %H:%M")
+            else:
+                date_exact = str(created_at)[:16].replace("T", " ")
+        except Exception:
+            date_exact = str(created_at)
+        page = context.user_data.get("hist_cartes_page", 0)
+        header = format_header_rich("DÉTAIL COMMANDE CARTE", "🎴", "purple", banner=False)
+        detail_msg = (
+            f"{header}\n\n"
+            f"📅 <b>Date :</b> {escape_html(str(date_exact))}\n"
+            f"🎴 <b>Carte :</b> <code>{escape_html(str(card_number))}</code>\n"
+            f"💎 <b>Points :</b> {points}"
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Retour à la liste", callback_data=f"hist_cartes_page_{page}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, detail_msg, reply_markup, "HTML")
+            await query.answer()
+        except TelegramError as e:
+            logger.error(f"Erreur affichage détail historique cartes: {e}")
+        return
+
     # Gestion de "Report" - affichage du menu de sélection du type de report
     if callback_data == "cmd_report":
         # Nettoyer les états précédents
@@ -3311,6 +4057,28 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.edit_message_text(message, reply_markup=reply_markup, parse_mode="Markdown")
         except TelegramError as e:
             logger.error(f"Erreur lors de l'affichage du menu config: {e}")
+        return
+    
+    # Lancer le mode création de compte (admin uniquement)
+    if callback_data == "admin_create_account" and role == "admin":
+        # Nettoyer d'éventuels états précédents
+        context.user_data.pop('admin_create_account_mode', None)
+        context.user_data['admin_create_account_mode'] = True
+
+        message = (
+            "🆕 <b>Création automatique de compte</b>\n\n"
+            "Veuillez envoyer <b>une carte de 6 caractères</b> en hexadécimal <b>MAJUSCULE</b> (0-9, A-F).\n\n"
+            "Exemple : <code>1A2B3C</code>\n\n"
+            "Le bot va ensuite créer un compte KFC avec des informations aléatoires "
+            "puis tenter d'associer cette carte au compte."
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="menu_principal")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        try:
+            await query.edit_message_text(message, reply_markup=reply_markup, parse_mode="HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur lors de l'affichage du mode création de compte: {e}")
         return
     
     # Gestion de config_role (gestion des rôles)
@@ -3609,24 +4377,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.error(f"Erreur lors de l'affichage du résultat de réinitialisation: {e}")
         return
     
-    # Gestion de config_points (prix, min, max)
+    # Gestion de config_points (min, max)
     if callback_data == "config_points" and role == "admin":
         # Nettoyer config_edit si présent (annulation d'édition)
         context.user_data.pop('config_edit', None)
         
-        point_price = get_point_price_per_10()
         point_min = get_point_min()
         point_max = get_point_max()
         
         message = (
             "💰 **Configuration des Points**\n\n"
-            f"💵 Prix pour 10 points: **{point_price:.2f} €**\n"
             f"📊 Minimum: **{point_min} points**\n"
             f"📈 Maximum: **{point_max} points**\n\n"
             "Sélectionnez un paramètre à modifier :"
         )
         keyboard = [
-            [InlineKeyboardButton("💵 Modifier le prix", callback_data="config_price_edit")],
             [InlineKeyboardButton("📊 Modifier le minimum", callback_data="config_min_edit")],
             [InlineKeyboardButton("📈 Modifier le maximum", callback_data="config_max_edit")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_config")]
@@ -3676,18 +4441,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         staff_thread_payment_str = str(staff_thread_payment) if staff_thread_payment else "Non configuré"
         staff_thread_report = get_staff_thread_report()
         staff_thread_report_str = str(staff_thread_report) if staff_thread_report else "Non configuré"
-        
+        staff_thread_entretien = get_staff_thread_entretien()
+        staff_thread_entretien_str = str(staff_thread_entretien) if staff_thread_entretien else "Non configuré"
+
         message = (
             "📢 **Configuration du Canal Staff**\n\n"
             f"📢 Canal Staff: `{staff_channel}`\n"
             f"🧵 Thread Paiement: `{staff_thread_payment_str}`\n"
-            f"📝 Thread Report: `{staff_thread_report_str}`\n\n"
+            f"📝 Thread Report: `{staff_thread_report_str}`\n"
+            f"🔧 Thread Entretien: `{staff_thread_entretien_str}`\n\n"
             "Sélectionnez un paramètre à modifier :"
         )
         keyboard = [
             [InlineKeyboardButton("📢 Modifier le Canal Staff", callback_data="config_staff_channel_edit")],
             [InlineKeyboardButton("🧵 Modifier le Thread Paiement", callback_data="config_staff_thread_payment_edit")],
             [InlineKeyboardButton("📝 Modifier le Thread Report", callback_data="config_staff_thread_report_edit")],
+            [InlineKeyboardButton("🔧 Modifier le Thread Entretien", callback_data="config_staff_thread_entretien_edit")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_config")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -3865,9 +4634,24 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.error(f"Erreur lors de la modification de l'arrêt d'urgence: {e}")
         return
     
-    # Gestion de l'interface d'achat de points
+    # Gestion de l'interface d'achat de points : d'abord choix de la formule
     if callback_data == "cmd_acheter_points":
-        await show_points_purchase_interface(update, context)
+        await show_points_formula_choice(update, context)
+        return
+    
+    # Retour au choix de formule (depuis l'interface +/-)
+    if callback_data == "points_formula_choice":
+        await show_points_formula_choice(update, context)
+        return
+
+    # Choix d'une formule (solo, duo, etc.) -> ouvrir l'interface +/- avec le nombre de points par défaut
+    if callback_data.startswith("points_formula_"):
+        formula = callback_data.replace("points_formula_", "", 1)
+        default_points = POINTS_FORMULA_DEFAULTS.get(formula)
+        if default_points is not None:
+            await show_points_purchase_interface(update, context, selected_points=default_points)
+        else:
+            await show_points_formula_choice(update, context)
         return
     
     # Gestion des boutons +/- pour les points (debouncing strict pour éviter le freeze Telegram)
@@ -3930,29 +4714,26 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             point_max = get_point_max()
             
             if points_to_add < point_min or points_to_add > point_max:
-                await query.edit_message_text(
+                await safe_edit_message_text(
+                    query,
                     f"❌ Le nombre de points doit être entre {point_min} et {point_max}.",
-                    reply_markup=create_back_button("shop")
+                    create_back_button("shop"),
+                    "HTML"
                 )
                 return
             
             if points_to_add <= 0:
-                await query.edit_message_text(
+                await safe_edit_message_text(
+                    query,
                     "❌ Le nombre de points doit être supérieur à 0.",
-                    reply_markup=create_back_button("shop")
+                    create_back_button("shop"),
+                    "HTML"
                 )
                 return
             
-            # Calculer le prix
-            point_price = get_point_price_per_10()
-            price_initial = (points_to_add / 10) * point_price
-            
-            # Appliquer la réduction de l'utilisateur
+            # Calculer le prix selon la table de paliers
             user_reduction = get_user_reduction(user_id)
-            price_euros = price_initial * (1 - user_reduction / 100)
-            
-            # Arrondir à 2 décimales pour éviter les problèmes de précision
-            price_euros = round(price_euros, 2)
+            price_initial, price_euros = compute_points_price(points_to_add, user_reduction)
             
             # Vérifier que le prix n'est pas négatif (sécurité)
             if price_euros < 0:
@@ -3976,12 +4757,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 detail_content = (
                     f"{format_info_card('Points à acheter', str(points_to_add), '📊')}\n"
                     f"{format_info_card('Prix initial', f'{price_initial:.2f} €', '💵')}\n"
-                    f"{format_info_card('Montant après réduction', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
+                    f"{format_info_card('Total après réduction', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
                 )
             else:
                 detail_content = (
                     f"{format_info_card('Points à acheter', str(points_to_add), '📊')}\n"
-                    f"{format_info_card('Montant', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
+                    f"{format_info_card('Total', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
                 )
             
             payment_section = format_section_rich(
@@ -4005,18 +4786,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             try:
-                await query.edit_message_text(
-                    summary_message,
-                    reply_markup=reply_markup,
-                    parse_mode="HTML"
-                )
+                await safe_edit_message_text(query, summary_message, reply_markup, "HTML")
                 
                 # Vérifier si l'utilisateur a déjà une transaction en attente (empêcher les transactions multiples)
                 existing_payment_id = get_user_pending_payment(user_id)
                 if existing_payment_id:
-                    await query.edit_message_text(
+                    await safe_edit_message_text(
+                        query,
                         "⚠️ Vous avez déjà une transaction en attente. Veuillez attendre sa validation ou l'annuler avant d'en créer une nouvelle.",
-                        reply_markup=create_back_button("shop")
+                        create_back_button("shop"),
+                        "HTML"
                     )
                     logger.warning(f"Tentative de créer une transaction alors qu'une existe déjà pour l'utilisateur {user_id}")
                     return
@@ -4045,22 +4824,24 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                             )
                             success_message = f"{success_header}\n\n{success_section}"
                             
-                            await query.edit_message_text(
-                                success_message,
-                                reply_markup=create_back_button("shop"),
-                                parse_mode="HTML"
+                            await safe_edit_message_text(
+                                query, success_message, create_back_button("shop"), "HTML"
                             )
                         else:
                             logger.error(f"Échec de l'acceptation automatique de la transaction {payment_id}")
-                            await query.edit_message_text(
+                            await safe_edit_message_text(
+                                query,
                                 "❌ Erreur lors du traitement automatique. Veuillez contacter un administrateur.",
-                                reply_markup=create_back_button("shop")
+                                create_back_button("shop"),
+                                "HTML"
                             )
                     else:
                         logger.error(f"Échec de la création de la transaction pour l'utilisateur {user_id}: payment_id={payment_id}")
-                        await query.edit_message_text(
+                        await safe_edit_message_text(
+                            query,
                             "❌ Erreur lors de la création de la transaction. Veuillez réessayer.",
-                            reply_markup=create_back_button("shop")
+                            create_back_button("shop"),
+                            "HTML"
                         )
                     return
                 
@@ -4082,22 +4863,28 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                         logger.error(f"PROBLÈME: Transaction créée (ID={payment_id}) mais non trouvée lors de la vérification immédiate (trouvé: {verification_id})")
                 else:
                     logger.error(f"Échec de la création de la transaction pour l'utilisateur {user_id}: payment_id={payment_id}")
-                    await query.edit_message_text(
+                    await safe_edit_message_text(
+                        query,
                         "❌ Erreur lors de la création de la transaction. Veuillez réessayer.",
-                        reply_markup=create_back_button("shop")
+                        create_back_button("shop"),
+                        "HTML"
                     )
                     return
             except TelegramError as e:
                 logger.error(f"Erreur lors de l'affichage du résumé: {e}")
-                await query.edit_message_text(
+                await safe_edit_message_text(
+                    query,
                     "❌ Une erreur s'est produite. Veuillez réessayer.",
-                    reply_markup=create_back_button("shop")
+                    create_back_button("shop"),
+                    "HTML"
                 )
         except (ValueError, IndexError) as e:
             logger.error(f"Erreur lors de la validation des points: {e}")
-            await query.edit_message_text(
+            await safe_edit_message_text(
+                query,
                 "❌ Erreur lors du traitement. Veuillez réessayer.",
-                reply_markup=create_back_button("shop")
+                create_back_button("shop"),
+                "HTML"
             )
         return
     
@@ -4428,27 +5215,25 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     
     # Gestion de l'édition des valeurs de configuration (envoi d'un message pour saisie)
-    if callback_data in {"config_price_edit", "config_min_edit", "config_max_edit", "config_card_margin_edit", 
+    if callback_data in {"config_min_edit", "config_max_edit", "config_card_margin_edit", 
                          "config_payment_url_edit", "config_staff_channel_edit", "config_staff_thread_payment_edit", 
                          "config_staff_thread_report_edit"} and role == "admin":
         config_labels = {
-            "config_price_edit": ("Prix pour 10 points (en euros)", "point_price_per_10", "float"),
             "config_min_edit": ("Minimum de points", "point_min", "int"),
             "config_max_edit": ("Maximum de points", "point_max", "int"),
             "config_card_margin_edit": ("Marge pour l'achat de cartes (points)", "card_margin", "int"),
             "config_payment_url_edit": ("URL de paiement", "payment_url", "str"),
             "config_staff_channel_edit": ("ID du Canal Staff (commence par -)", "staff_channel_id", "str"),
             "config_staff_thread_payment_edit": ("ID du Thread Paiement (nombre)", "staff_thread_payment", "int"),
-            "config_staff_thread_report_edit": ("ID du Thread Report (nombre)", "staff_thread_report", "int")
+            "config_staff_thread_report_edit": ("ID du Thread Report (nombre)", "staff_thread_report", "int"),
+            "config_staff_thread_entretien_edit": ("ID du Thread Entretien (nombre)", "staff_thread_entretien", "int")
         }
         
         label, key, value_type = config_labels[callback_data]
         
         # Valeur par défaut selon le type
-        if value_type == "float":
-            current_value = get_config_value(key, 0.03)
-        elif value_type == "int":
-            if key in ["staff_thread_payment", "staff_thread_report"]:
+        if value_type == "int":
+            if key in ["staff_thread_payment", "staff_thread_report", "staff_thread_entretien"]:
                 current_value = get_config_value(key, "")
             elif key == "card_margin":
                 current_value = get_config_value(key, DEFAULT_CARD_MARGIN)
@@ -4474,11 +5259,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Déterminer le menu de retour selon le type de config
         if key == "payment_url":
             back_callback = "config_payement"
-        elif key in ["point_price_per_10", "point_min", "point_max"]:
+        elif key in ["point_min", "point_max"]:
             back_callback = "config_points"
         elif key == "card_margin":
             back_callback = "config_carte"
-        elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_report"]:
+        elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_report", "staff_thread_entretien"]:
             back_callback = "config_canal"
         else:
             back_callback = "cmd_config"
@@ -4911,16 +5696,14 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
         # Ajouter les informations de réduction si applicable
         if user_reduction > 0:
             # Calculer le prix initial (prix avant réduction)
-            # price_final = price_initial * (1 - reduction/100)
-            # price_initial = price_final / (1 - reduction/100)
             if user_reduction < 100:
+                # Inversion de la réduction appliquée
                 price_initial = price_float / (1 - user_reduction / 100)
-                price_initial = round(price_initial, 2)
+                price_initial = math.ceil(price_initial * 20) / 20
             else:
                 # Réduction de 100%, le prix initial est celui des points sans réduction
-                point_price = get_point_price_per_10()
-                price_initial = (points / 10) * point_price
-                price_initial = round(price_initial, 2)
+                base_price = points * get_price_per_point(points)
+                price_initial = math.ceil(base_price * 20) / 20
             
             admin_message_lines.extend([
                 f"💵 Prix avant réduction: **{price_initial:.2f} €**",
@@ -5124,6 +5907,111 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 parse_mode="HTML"
             )
         return
+    
+    # Vérifier si un admin est en mode création de compte (injection carte)
+    if context.user_data.get('admin_create_account_mode') and role == "admin":
+        text = (update.message.text or "").strip().upper()
+        # Validation: 6 caractères hexadécimaux majuscules
+        if not re.fullmatch(r'[0-9A-F]{6}', text):
+            await update.message.reply_text(
+                "❌ Carte invalide.\n\n"
+                "Merci d'envoyer exactement <b>6 caractères</b> en hexadécimal <b>MAJUSCULE</b> (0-9, A-F).\n"
+                "Exemple : <code>1A2B3C</code>",
+                parse_mode="HTML"
+            )
+            return
+
+        login_card = text
+
+        # Informer l'admin que le traitement peut prendre du temps
+        processing_msg = await update.message.reply_text(
+            "⏳ Création du compte et liaison de la carte en cours...\n"
+            "Cela peut prendre quelques secondes.",
+            parse_mode="HTML"
+        )
+
+        try:
+            # 1) Création du compte via creation_log
+            account_result = await create_account()
+            if not account_result.get("ok"):
+                errmsg = account_result.get("message", "Échec de la création du compte.")
+                await processing_msg.edit_text(
+                    f"❌ <b>Échec de la création du compte</b>.\n\n{errmsg}",
+                    parse_mode="HTML"
+                )
+                # On reste en mode pour permettre de réessayer avec une autre carte ou la même
+                return
+
+            profile = account_result.get("account") or {}
+
+            # 2) Injection de la carte via injecteur_log
+            status, a, b = await inject(profile, login_card)
+
+            if status == "success":
+                capture, capture2 = a, b
+                # Essayer de parser les chaînes capture/capture2 en pseudo-JSON
+                try:
+                    data1 = json.loads("{" + capture + "}")
+                except Exception:
+                    data1 = {}
+                try:
+                    data2 = json.loads("{" + capture2 + "}")
+                except Exception:
+                    data2 = {}
+
+                carte = data1.get("carte", login_card)
+                points = data1.get("point", "N/A")
+                date = data1.get("date", "N/A")
+                url_wallet = data1.get("url", "N/A")
+
+                mail = data2.get("mail", profile.get("mail"))
+                password = data2.get("password", profile.get("password"))
+                num = data2.get("numero", profile.get("num"))
+                prenom = data2.get("prenom", profile.get("name1"))
+                nom = data2.get("nom", profile.get("name2"))
+
+                success_msg = (
+                    "✅ <b>Compte créé et carte injectée avec succès.</b>\n\n"
+                    f"💳 <b>Carte:</b> <code>{carte}</code>\n"
+                    f"💎 <b>Points:</b> {points}\n"
+                    f"📅 <b>Date d'expiration des points:</b> {date}\n"
+                    f"🔗 <b>URL Wallet:</b> <code>{url_wallet}</code>\n\n"
+                    f"👤 <b>Profil créé :</b>\n"
+                    f"• Nom: {prenom} {nom}\n"
+                    f"• Email: <code>{mail}</code>\n"
+                    f"• Mot de passe: <code>{password}</code>\n"
+                    f"• Téléphone: <code>{num}</code>\n"
+                )
+
+                await processing_msg.edit_text(success_msg, parse_mode="HTML")
+
+                # Sortir du mode après succès
+                context.user_data.pop('admin_create_account_mode', None)
+                return
+
+            else:
+                error_code, error_message = a, b
+                await processing_msg.edit_text(
+                    "❌ <b>Échec de la liaison de la carte au compte.</b>\n\n"
+                    f"Code d'erreur: <code>{error_code}</code>\n"
+                    f"Détail: {error_message}\n\n"
+                    "Vous pouvez réessayer avec la même carte ou une autre.",
+                    parse_mode="HTML"
+                )
+                # On reste en mode pour permettre un nouvel essai
+                return
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la création/injection de compte: {e}")
+            try:
+                await processing_msg.edit_text(
+                    "❌ <b>Erreur inattendue lors de la création ou de l'injection du compte.</b>", 
+                    parse_mode="HTML"
+                )
+            except Exception:
+                pass
+            # On reste en mode pour permettre de réessayer
+            return
     
     # IMPORTANT: Vérifier EN PREMIER si l'utilisateur est en train d'envoyer un report
     # Cette vérification doit être AVANT toutes les autres pour éviter que les messages soient interceptés
@@ -5373,7 +6261,50 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             context.user_data.pop('reduction_edit_mode', None)
             context.user_data.pop('reduction_user_id', None)
         return
-    
+
+    # Vérifier si l'admin est en train de définir la réduction pour un nouveau vendeur (AVANT role_add_mode)
+    if 'vendeur_reduction_mode' in context.user_data and context.user_data.get('vendeur_reduction_mode') and role == "admin":
+        try:
+            reduction = int(update.message.text.strip())
+            if reduction < 0 or reduction > 100:
+                await update.message.reply_text(
+                    "❌ La réduction doit être entre 0 et 100. Veuillez réessayer.",
+                    parse_mode="Markdown"
+                )
+                return
+
+            user_id_vendeur = context.user_data.get('vendeur_user_id')
+            if user_id_vendeur and set_user_reduction(user_id_vendeur, reduction):
+                await update.message.reply_text(
+                    f"✅ **Réduction définie !**\n\n"
+                    f"👤 Vendeur: `{user_id_vendeur}`\n"
+                    f"💰 Réduction: **{reduction}%**",
+                    parse_mode="Markdown"
+                )
+                logger.info(f"Réduction définie pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}: {reduction}%")
+            else:
+                await update.message.reply_text(
+                    "❌ Erreur lors de la définition de la réduction.",
+                    parse_mode="Markdown"
+                )
+        except ValueError:
+            await update.message.reply_text(
+                "❌ Valeur invalide. Veuillez envoyer un nombre entre 0 et 100.",
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.error(f"Erreur lors de la définition de la réduction pour vendeur: {e}")
+            await update.message.reply_text(
+                "❌ Erreur lors de la définition de la réduction.",
+                parse_mode="Markdown"
+            )
+
+        context.user_data.pop('vendeur_reduction_mode', None)
+        context.user_data.pop('vendeur_user_id', None)
+        context.user_data.pop('role_add_mode', None)
+        context.user_data.pop('role_selected', None)
+        return
+
     # Vérifier si l'admin est en train d'ajouter un rôle
     if 'role_add_mode' in context.user_data and context.user_data.get('role_add_mode') and role == "admin":
         role_type = context.user_data.get('role_selected')
@@ -5386,6 +6317,8 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                         parse_mode="Markdown"
                     )
                 elif set_user_role(user_id_to_add, role_type):
+                    if role_type == "vendeur":
+                        set_revendeur_public_token(user_id_to_add)
                     role_emoji = "💼" if role_type == "vendeur" else "🛡️"
                     # Si c'est un vendeur, demander la réduction
                     if role_type == "vendeur":
@@ -5424,55 +6357,12 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                     "❌ Erreur lors de l'ajout du rôle.",
                     parse_mode="Markdown"
                 )
-            
+
             if 'vendeur_reduction_mode' not in context.user_data:
                 context.user_data.pop('role_add_mode', None)
                 context.user_data.pop('role_selected', None)
         return
-    
-    # Vérifier si l'admin est en train de définir la réduction pour un nouveau vendeur
-    if 'vendeur_reduction_mode' in context.user_data and context.user_data.get('vendeur_reduction_mode') and role == "admin":
-        try:
-            reduction = int(update.message.text.strip())
-            if reduction < 0 or reduction > 100:
-                await update.message.reply_text(
-                    "❌ La réduction doit être entre 0 et 100. Veuillez réessayer.",
-                    parse_mode="Markdown"
-                )
-                return
-            
-            user_id_vendeur = context.user_data.get('vendeur_user_id')
-            if user_id_vendeur and set_user_reduction(user_id_vendeur, reduction):
-                await update.message.reply_text(
-                    f"✅ **Réduction définie !**\n\n"
-                    f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **{reduction}%**",
-                    parse_mode="Markdown"
-                )
-                logger.info(f"Réduction définie pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}: {reduction}%")
-            else:
-                await update.message.reply_text(
-                    "❌ Erreur lors de la définition de la réduction.",
-                    parse_mode="Markdown"
-                )
-        except ValueError:
-            await update.message.reply_text(
-                "❌ Valeur invalide. Veuillez envoyer un nombre entre 0 et 100.",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.error(f"Erreur lors de la définition de la réduction pour vendeur: {e}")
-            await update.message.reply_text(
-                "❌ Erreur lors de la définition de la réduction.",
-                parse_mode="Markdown"
-            )
-        
-        context.user_data.pop('vendeur_reduction_mode', None)
-        context.user_data.pop('vendeur_user_id', None)
-        context.user_data.pop('role_add_mode', None)
-        context.user_data.pop('role_selected', None)
-        return
-    
+
     # Vérifier si l'admin est en train de retirer un rôle
     if 'role_remove_mode' in context.user_data and context.user_data.get('role_remove_mode') and role == "admin":
         role_type = context.user_data.get('role_selected')
@@ -5739,9 +6629,9 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         elif value_type == "int":
             try:
                 new_value = int(text)
-                # Pour staff_thread_payment, on accepte n'importe quel entier (peut être négatif)
+                # Pour les threads staff, on accepte n'importe quel entier (peut être négatif)
                 # Pour card_margin, on accepte seulement positif ou nul (0 = pas de marge)
-                if key not in ["staff_thread_payment"] and new_value < 0:
+                if key not in ["staff_thread_payment", "staff_thread_report", "staff_thread_entretien"] and new_value < 0:
                     await update.message.reply_text(
                         "❌ Erreur: La valeur doit être un nombre entier positif ou nul.\n"
                         "Veuillez réessayer ou annuler."
@@ -5792,11 +6682,11 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             # Déterminer le menu de retour selon le type de config
             if key == "payment_url":
                 back_callback = "config_payement"
-            elif key in ["point_price_per_10", "point_min", "point_max"]:
+            elif key in ["point_min", "point_max"]:
                 back_callback = "config_points"
             elif key == "card_margin":
                 back_callback = "config_carte"
-            elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_report"]:
+            elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_report", "staff_thread_entretien"]:
                 back_callback = "config_canal"
             else:
                 back_callback = "cmd_config"
@@ -5869,9 +6759,9 @@ def main() -> None:
     # Initialiser le pool DB (réutilisation des connexions)
     init_db_pool()
 
-    # Initialisation de la base de données
-    init_database()
-    
+    # Vérifier que les tables existent (création/migration gérée par start.py)
+    verify_bot_tables_exist()
+
     # Nettoyage des transactions expirées au démarrage
     cleanup_old_pending_payments(days=7)
     
@@ -5880,8 +6770,13 @@ def main() -> None:
         logger.error("Configuration invalide. Arrêt du bot.")
         return
     
-    # Création de l'application
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Création de l'application (timeouts augmentés pour envoi de photos volumineuses)
+    request = HTTPXRequest(
+        connect_timeout=10,
+        read_timeout=60,
+        write_timeout=30
+    )
+    application = Application.builder().token(BOT_TOKEN).request(request).build()
     
     # Enregistrement des handlers
     application.add_handler(CommandHandler("start", start_command))

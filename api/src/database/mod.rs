@@ -26,8 +26,20 @@ pub async fn update_kfc_account(
     kfc_account: model::UpdateKfcStorage,
 ) -> Result<(), diesel::result::Error> {
     use crate::schema::kfc_storage::dsl::*;
-    diesel::update(kfc_storage.filter(id.eq(&kfc_account.id)))
-        .set(&kfc_account)
+    let set = model::UpdateKfcStorageSet {
+        id: kfc_account.id,
+        carte: kfc_account.carte,
+        email: kfc_account.email,
+        password: kfc_account.password,
+        nom: kfc_account.nom,
+        point: kfc_account.point,
+        expired_at: kfc_account.expired_at,
+        prenom: kfc_account.prenom,
+        numero: kfc_account.numero,
+        ddb: kfc_account.ddb,
+    };
+    diesel::update(kfc_storage.filter(customer_id.eq(&kfc_account.customer_id)))
+        .set(&set)
         .execute(conn)?;
     Ok(())
 }
