@@ -588,6 +588,55 @@ def run_all_checks() -> list[CheckResult]:
 
 SEP = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Pistes de resolution par theme (cle = partie du nom du check ou message)
+REMEDIATIONS: dict[str, str] = {
+    "value.env": "Creer le fichier value.env a la racine du projet (copier value.env.example puis remplir).",
+    "BOT_TOKEN": "Definir BOT_TOKEN dans value.env (token du bot Telegram depuis @BotFather).",
+    "DATABASE_URL": "Definir DATABASE_URL dans value.env (format postgres://user:pass@host:port/db).",
+    "DB_HOST": "Definir DB_HOST dans value.env (ex: localhost ou IP du serveur PostgreSQL).",
+    "DB_PORT": "Definir DB_PORT dans value.env (ex: 5432).",
+    "DB_NAME": "Definir DB_NAME dans value.env (nom de la base).",
+    "DB_USER": "Definir DB_USER dans value.env (utilisateur PostgreSQL).",
+    "DB_PASSWORD": "Definir DB_PASSWORD dans value.env (mot de passe PostgreSQL).",
+    "BASIC_AUTH": "Definir BASIC_AUTH_USER et BASIC_AUTH_PASSWORD dans value.env (auth API).",
+    "KFC_API": "Definir KFC_API_URL, KFC_API_USERNAME, KFC_API_PASSWORD dans value.env.",
+    "Internet": "Verifier la connexion reseau et qu'aucun pare-feu ne bloque api.telegram.org.",
+    "Python": "Installer Python 3.9 ou superieur (python.org ou winget install Python.Python.3.11).",
+    "psycopg2": "Installer : pip install psycopg2-binary",
+    "requests": "Installer : pip install requests",
+    "Connexion PostgreSQL": "Demarrer PostgreSQL, verifier host/port/user/password dans value.env, que la base existe.",
+    "Tables bot": "Verifier les droits DB (CREATE TABLE). Corriger l'erreur SQL affichee ci-dessus.",
+    "Migrations Diesel": "Installer Rust + Cargo (rustup.rs), puis dans api/ : diesel migration run.",
+    "kfc_storage": "Lancer les migrations Diesel (diesel migration run dans api/).",
+    "Table ": "Les tables sont creees par start.py ou par les migrations (api/). Verifier la connexion DB.",
+    "Token Telegram": "Verifier BOT_TOKEN dans value.env et que le bot existe sur @BotFather.",
+    "Port ": "Changer PORT dans value.env ou liberer le port (fermer l'autre processus qui l'utilise).",
+    "Cargo": "Installer Rust : https://rustup.rs puis redemarrer le terminal.",
+    "python-telegram-bot": "Installer : pip install python-telegram-bot",
+    "python-dotenv": "Installer : pip install python-dotenv",
+    "ADMIN_ID": "Definir ADMIN_ID dans value.env (ton Telegram user ID, entier > 0).",
+    "MODERATOR_ID": "Definir MODERATOR_ID dans value.env (ID Telegram du moderateur).",
+    "SELLER_ID": "Definir SELLER_ID dans value.env (ID Telegram du vendeur).",
+    "staff_channel": "Configurer staff_channel_id (table config ou CONFIG_STAFF_CHANNEL_ID). Le bot doit etre dans le canal.",
+    "emergency_stop": "Dans la config (table config ou .env), mettre emergency_stop a false pour relancer.",
+    "payment_url": "Renseigner payment_url dans la config (table config ou CONFIG_PAYMENT_URL).",
+    "qrcode": "Installer : pip install qrcode",
+    "Pillow": "Installer : pip install Pillow",
+    "numpy": "Installer : pip install numpy",
+    "Banniere": "Ajouter les images manquantes dans main/ (banniere_profil.jpg, banniere_shop.jpg, banniere_point.jpg, banniere_qrcode.png).",
+    "diesel": "Installer Rust (rustup.rs), puis diesel CLI : cargo install diesel_cli.",
+}
+
+
+def _remediation_for(name: str, msg: str) -> str:
+    """Retourne une piste de resolution pour un check en echec."""
+    name_lower = name.lower()
+    msg_lower = (msg or "").lower()
+    for key, hint in REMEDIATIONS.items():
+        if key.lower() in name_lower or key.lower() in msg_lower:
+            return hint
+    return "Verifier la config (value.env, table config) et les logs ci-dessus."
+
 
 def _format_line(name: str, level: Level, ok: bool, msg: str) -> str:
     label = CHECK_LABELS.get(name, name)
@@ -631,6 +680,23 @@ def has_critical_failure(results: list[CheckResult]) -> bool:
     return any(not ok and lv == Level.CRITIQUE for _, lv, ok, _ in results)
 
 
+def display_failures_summary(results: list[CheckResult]) -> None:
+    """Affiche en fin de run la liste des echecs avec pourquoi et comment faire."""
+    failed = [(name, level, msg) for name, level, ok, msg in results if not ok]
+    if not failed:
+        return
+    print(SEP)
+    print("     CE QUI N'A PAS MARCHE (et comment faire)")
+    print(SEP)
+    for i, (name, level, msg) in enumerate(failed, 1):
+        remedy = _remediation_for(name, msg)
+        print(f"  {i}. {name}")
+        print(f"     Pourquoi : {msg or level.value}")
+        print(f"     Comment faire : {remedy}")
+        print()
+    print(SEP)
+
+
 def main() -> None:
     os.chdir(ROOT_DIR)
 
@@ -644,6 +710,7 @@ def main() -> None:
     print(SEP)
 
     if not launched:
+        display_failures_summary(results)
         sys.exit(1)
 
     api_dir = ROOT_DIR / "api"
