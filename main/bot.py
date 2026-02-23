@@ -179,6 +179,19 @@ KFC_API_USERNAME: Final[str] = os.getenv('KFC_API_USERNAME', '')
 KFC_API_PASSWORD: Final[str] = os.getenv('KFC_API_PASSWORD', '')
 KFC_STORAGE_TABLE: Final[str] = os.getenv('KFC_STORAGE_TABLE', 'kfc_storage')
 
+
+def _parse_kfc_generate_timeout() -> int:
+    """Parse KFC_API_GENERATE_TIMEOUT depuis .env, défaut 120s si absent ou invalide."""
+    try:
+        val = os.getenv('KFC_API_GENERATE_TIMEOUT', '120')
+        n = int(val)
+        return n if n > 0 else 120
+    except (ValueError, TypeError):
+        return 120
+
+
+KFC_API_GENERATE_TIMEOUT: Final[int] = _parse_kfc_generate_timeout()
+
 # Mapping des clés config DB -> variables d'environnement (fallback si la DB n'a pas la clé)
 CONFIG_KEY_TO_ENV: Final[Dict[str, str]] = {
     "point_min": "CONFIG_POINT_MIN",
@@ -462,6 +475,19 @@ def init_database() -> None:
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_card_purchase_history_user_created
                 ON card_purchase_history (user_id, created_at DESC)
+            """)
+
+            # Migration : customer_id pour récupérer les infos depuis kfc_storage
+            cursor.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'card_purchase_history' AND column_name = 'customer_id'
+                    ) THEN
+                        ALTER TABLE card_purchase_history ADD COLUMN customer_id VARCHAR(255);
+                    END IF;
+                END $$;
             """)
 
             # Insérer les valeurs par défaut si elles n'existent pas
@@ -981,12 +1007,12 @@ async def generate_kfc_card(points: int) -> Optional[Dict[str, Any]]:
     }
     
     try:
-        # Appel API avec timeout de 30 secondes (l'API peut prendre du temps pour vérifier via KFC)
+        # Appel API avec timeout configurable (KFC_API_GENERATE_TIMEOUT, défaut 120s)
         response = requests.post(
             f"{KFC_API_URL}/generate",
             json=payload,
             headers=headers,
-            timeout=30
+            timeout=KFC_API_GENERATE_TIMEOUT
         )
         
         if response.status_code == 200:
@@ -1701,32 +1727,43 @@ def get_user_card_history_count(user_id: int) -> int:
         return 0
 
 
-def insert_card_purchase_history(user_id: int, card_number: str, points: int) -> bool:
-    """Enregistre un achat de carte dans l'historique (sans QR). Retourne True si OK."""
+def insert_card_purchase_history(
+    user_id: int,
+    card_number: str,
+    points: int,
+    customer_id: Optional[str] = None,
+) -> Optional[int]:
+    """
+    Enregistre un achat de carte dans l'historique (sans QR).
+    customer_id: optionnel, permet de récupérer les infos complètes depuis kfc_storage.
+    Retourne l'id de l'enregistrement créé ou None en cas d'erreur.
+    """
     try:
         card_number_safe = (str(card_number).strip() or "N/A")[:255]
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO card_purchase_history (user_id, card_number, points)
-                VALUES (%s, %s, %s)
-            """, (user_id, card_number_safe, max(1, int(points))))
-        return True
+                INSERT INTO card_purchase_history (user_id, card_number, points, customer_id)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id
+            """, (user_id, card_number_safe, max(1, int(points)), customer_id))
+            row = cursor.fetchone()
+            return row[0] if row else None
     except psycopg2.Error as e:
         logger.error(f"Erreur lors de l'insertion dans card_purchase_history: {e}")
-        return False
+        return None
 
 
 def get_user_card_history(user_id: int, limit: int = 5, offset: int = 0) -> list:
     """
     Récupère l'historique des achats de cartes d'un utilisateur (tri par date décroissante).
-    Retourne une liste de (id, card_number, points, created_at).
+    Retourne une liste de (id, card_number, points, created_at, customer_id).
     """
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, card_number, points, created_at
+                SELECT id, card_number, points, created_at, customer_id
                 FROM card_purchase_history
                 WHERE user_id = %s
                 ORDER BY created_at DESC
@@ -1739,17 +1776,52 @@ def get_user_card_history(user_id: int, limit: int = 5, offset: int = 0) -> list
 
 
 def get_card_purchase_by_id(record_id: int) -> Optional[tuple]:
-    """Récupère un enregistrement d'historique carte par id. Retourne (id, user_id, card_number, points, created_at) ou None."""
+    """Récupère un enregistrement d'historique carte par id. Retourne (id, user_id, card_number, points, created_at, customer_id) ou None."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, user_id, card_number, points, created_at
+                SELECT id, user_id, card_number, points, created_at, customer_id
                 FROM card_purchase_history WHERE id = %s
             """, (record_id,))
             return cursor.fetchone()
     except psycopg2.Error as e:
         logger.error(f"Erreur get_card_purchase_by_id: {e}")
+        return None
+
+
+def get_kfc_storage_by_customer_id(customer_id: str) -> Optional[dict]:
+    """
+    Récupère une ligne de kfc_storage par customer_id (unique).
+    Retourne un dict avec carte, email, password, nom, point, expired_at, prenom, numero, ddb, id, etc.
+    """
+    if not customer_id or not str(customer_id).strip():
+        return None
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT carte, email, password, nom, point, expired_at, prenom, numero, ddb, id, customer_id
+                FROM kfc_storage WHERE customer_id = %s
+            """, (str(customer_id).strip(),))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return {
+                "carte": row[0],
+                "email": row[1],
+                "password": row[2],
+                "nom": row[3],
+                "point": row[4],
+                "expired_at": row[5],
+                "prenom": row[6],
+                "numero": row[7],
+                "ddb": row[8],
+                "id": row[9],
+                "customer_id": row[10],
+            }
+    except psycopg2.Error as e:
+        logger.error(f"Erreur get_kfc_storage_by_customer_id: {e}")
         return None
 
 
@@ -1786,9 +1858,9 @@ def _build_hist_points_keyboard(rows: list, user_id: int, page: int, page_size: 
 
 
 def _build_hist_cartes_keyboard(rows: list, user_id: int, page: int, page_size: int) -> list:
-    """Construit le clavier pour une page de l'historique cartes. rows = [(id, card_number, points, created_at), ...]"""
+    """Construit le clavier pour une page de l'historique cartes. rows = [(id, card_number, points, created_at, customer_id), ...]"""
     keyboard = []
-    for (rid, card_number, points, created_at) in rows:
+    for (rid, card_number, points, created_at, *_) in rows:
         d = _format_hist_date(created_at)
         keyboard.append([InlineKeyboardButton(f"{d} : {points} pts", callback_data=f"hist_cartes_detail_{rid}")])
     next_rows = get_user_card_history(user_id, limit=page_size, offset=(page + 1) * page_size)
@@ -2399,6 +2471,14 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         try:
             pid = int(callback_data.split("_")[-1])
             if pid > 0:
+                return True
+        except (ValueError, IndexError):
+            return False
+
+    if callback_data.startswith("card_info_full_") or callback_data.startswith("card_info_short_"):
+        try:
+            record_id = int(callback_data.split("_")[-1])
+            if record_id > 0:
                 return True
         except (ValueError, IndexError):
             return False
@@ -3056,7 +3136,12 @@ async def handle_card_purchase(update: Update, context: ContextTypes.DEFAULT_TYP
     card_id = card_data.get('id', 'N/A')
     card_number = card_data.get('carte', 'N/A')
     card_points = card_data.get('point', points)
-    insert_card_purchase_history(user_id, str(card_number), int(card_points))
+    role = get_user_role(user_id)
+    is_admin = role == "admin"
+    customer_id = card_data.get("customerId")
+    record_id = insert_card_purchase_history(
+        user_id, str(card_number), int(card_points), customer_id=customer_id
+    )
     
     # Succès : afficher les informations de la carte
     
@@ -3069,7 +3154,14 @@ async def handle_card_purchase(update: Update, context: ContextTypes.DEFAULT_TYP
         f"💎 <b>Points :</b> {card_points}\n"
     )
     
-    keyboard = [[InlineKeyboardButton("🔙 Retour à la boutique", callback_data="cmd_boutique")]]
+    # Admin : bouton supplémentaire "Afficher les infos complètes"
+    if is_admin and record_id is not None:
+        keyboard = [
+            [InlineKeyboardButton("📋 Afficher les infos complètes", callback_data=f"card_info_full_{record_id}")],
+            [InlineKeyboardButton("🔙 Retour à la boutique", callback_data="cmd_boutique")],
+        ]
+    else:
+        keyboard = [[InlineKeyboardButton("🔙 Retour à la boutique", callback_data="cmd_boutique")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # Générer la bannière avec QR code (même logique que creer qr_code.py), sans sauvegarde
@@ -3919,7 +4011,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not row or row[1] != user_id:
             await query.answer("Commande introuvable.", show_alert=True)
             return
-        _id, _user_id, card_number, points, created_at = row
+        _id, _user_id, card_number, points, created_at, cust_id = row
         try:
             if hasattr(created_at, "strftime"):
                 date_exact = created_at.strftime("%d/%m/%Y à %H:%M")
@@ -3936,12 +4028,99 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             f"💎 <b>Points :</b> {points}"
         )
         keyboard = [[InlineKeyboardButton("🔙 Retour à la liste", callback_data=f"hist_cartes_page_{page}")]]
+        # Admin : bouton infos complètes si customer_id (récup depuis kfc_storage)
+        if role == "admin" and cust_id:
+            keyboard.insert(0, [InlineKeyboardButton("📋 Afficher les infos complètes", callback_data=f"card_info_full_{record_id}")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         try:
             await safe_edit_message_text(query, detail_msg, reply_markup, "HTML")
             await query.answer()
         except TelegramError as e:
             logger.error(f"Erreur affichage détail historique cartes: {e}")
+        return
+
+    # Infos complètes carte (admin) — récup depuis kfc_storage
+    if callback_data.startswith("card_info_full_"):
+        try:
+            record_id = int(callback_data.replace("card_info_full_", "", 1))
+        except (ValueError, IndexError):
+            await query.answer("Commande introuvable.", show_alert=True)
+            return
+        row = get_card_purchase_by_id(record_id)
+        if not row:
+            await query.answer("Enregistrement introuvable.", show_alert=True)
+            return
+        _id, _user_id, card_number, points, created_at, cust_id = row
+        if _user_id != user_id and role != "admin":
+            await query.answer("Accès refusé.", show_alert=True)
+            return
+        if not cust_id:
+            await query.answer("Infos complètes non disponibles pour cet achat.", show_alert=True)
+            return
+        storage = get_kfc_storage_by_customer_id(cust_id)
+        if not storage:
+            await query.answer("Carte introuvable dans le stock.", show_alert=True)
+            return
+        header = format_header_rich("INFOS COMPLÈTES CARTE", "📋", "info", banner=False)
+        expired_str = str(storage.get("expired_at") or "")[:19].replace("T", " ") if storage.get("expired_at") else "—"
+        full_msg = (
+            f"{header}\n\n"
+            f"🎴 <b>Carte :</b> <code>{escape_html(str(storage.get('carte') or '—'))}</code>\n"
+            f"💎 <b>Points :</b> {storage.get('point') or points}\n"
+            f"🆔 <b>Customer ID :</b> <code>{escape_html(str(storage.get('customer_id') or '—'))}</code>\n"
+            f"📌 <b>ID :</b> <code>{escape_html(str(storage.get('id') or '—'))}</code>\n"
+            f"📅 <b>Expiration :</b> {escape_html(expired_str or '—')}\n"
+            f"📧 <b>Email :</b> <code>{escape_html(str(storage.get('email') or '—'))}</code>\n"
+            f"🔑 <b>Password :</b> <code>{escape_html(str(storage.get('password') or '—'))}</code>\n"
+            f"👤 <b>Nom :</b> {escape_html(str(storage.get('nom') or '—'))}\n"
+            f"👤 <b>Prénom :</b> {escape_html(str(storage.get('prenom') or '—'))}\n"
+            f"📱 <b>Numéro :</b> {escape_html(str(storage.get('numero') or '—'))}\n"
+            f"🎂 <b>Date naissance :</b> {escape_html(str(storage.get('ddb') or '—'))}"
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Retour à la carte", callback_data=f"card_info_short_{record_id}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, full_msg, reply_markup, "HTML")
+            await query.answer()
+        except TelegramError as e:
+            logger.error(f"Erreur affichage infos complètes carte: {e}")
+        return
+
+    # Retour à la vue courte de la carte (depuis infos complètes)
+    if callback_data.startswith("card_info_short_"):
+        try:
+            record_id = int(callback_data.replace("card_info_short_", "", 1))
+        except (ValueError, IndexError):
+            await query.answer("Commande introuvable.", show_alert=True)
+            return
+        row = get_card_purchase_by_id(record_id)
+        if not row:
+            await query.answer("Enregistrement introuvable.", show_alert=True)
+            return
+        _id, _user_id, card_number, points, created_at, cust_id = row
+        if _user_id != user_id and role != "admin":
+            await query.answer("Accès refusé.", show_alert=True)
+            return
+        success_header = format_header_rich("ACHAT RÉUSSI", "", "success", banner=False)
+        short_msg = (
+            f"{success_header}\n\n"
+            f"🎴 <b>Carte :</b> <code>{escape_html(str(card_number))}</code>\n"
+            f"💎 <b>Points :</b> {points}\n"
+        )
+        has_full = cust_id and role == "admin"
+        if has_full:
+            keyboard = [
+                [InlineKeyboardButton("📋 Afficher les infos complètes", callback_data=f"card_info_full_{record_id}")],
+                [InlineKeyboardButton("🔙 Retour à la boutique", callback_data="cmd_boutique")],
+            ]
+        else:
+            keyboard = [[InlineKeyboardButton("🔙 Retour à la boutique", callback_data="cmd_boutique")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, short_msg, reply_markup, "HTML")
+            await query.answer()
+        except TelegramError as e:
+            logger.error(f"Erreur retour vue courte carte: {e}")
         return
 
     # Gestion de "Report" - affichage du menu de sélection du type de report

@@ -240,6 +240,19 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 ON card_purchase_history (user_id, created_at DESC)
             """)
 
+            # Migration : customer_id pour récupérer les infos depuis kfc_storage
+            cur.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name = 'card_purchase_history' AND column_name = 'customer_id'
+                    ) THEN
+                        ALTER TABLE card_purchase_history ADD COLUMN customer_id VARCHAR(255);
+                    END IF;
+                END $$;
+            """)
+
             # Config par defaut (valeurs lues depuis le .env uniquement a la creation)
             now = datetime.now().isoformat()
             default_configs = [

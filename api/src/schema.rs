@@ -8,6 +8,17 @@ diesel::table! {
         card_number -> Varchar,
         points -> Int4,
         created_at -> Timestamp,
+        #[max_length = 255]
+        customer_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        kfc_id -> Nullable<Varchar>,
+        expired_at -> Nullable<Timestamp>,
+        #[max_length = 255]
+        prenom -> Nullable<Varchar>,
+        #[max_length = 50]
+        numero -> Nullable<Varchar>,
+        #[max_length = 50]
+        ddb -> Nullable<Varchar>,
     }
 }
 

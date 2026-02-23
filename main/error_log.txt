@@ -1,0 +1,3 @@
+[2026-02-12 19:42:37] [signup_400] AKhZPNYJBb@yopmail.com - {"errors":["Nous avons rencontré un problème lors de votre inscription. Merci de bien vouloir essayer plus tard."],"basketViewModel":null}
+[2026-02-12 19:43:07] [signup_400] 0ibfk3GYqG@yopmail.com - {"errors":["Nous avons rencontré un problème lors de votre inscription. Merci de bien vouloir essayer plus tard."],"basketViewModel":null}
+[2026-02-13 16:51:49] [signup_400] NCg9qI60m4@yopmail.com - {"errors":["Nous avons rencontré un problème lors de votre inscription. Merci de bien vouloir essayer plus tard."],"basketViewModel":null}

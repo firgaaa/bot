@@ -13,7 +13,7 @@ pub struct KfcResponse {
 
 pub async fn recheck_kfc_accounts(id: &str) -> Result<KfcResponse, AppError> {
     let client = wreq::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(10))
         .emulation(wreq_util::Emulation::random())
         .cert_verification(false)
         .build()
