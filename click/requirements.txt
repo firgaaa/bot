@@ -1,5 +1,5 @@
 # KFC Project + API Click & Collect
-requests
-flask
-python-dotenv
-psycopg2-binary
+requests==2.31.0
+flask>=3.0.0
+python-dotenv==1.0.1
+psycopg2-binary==2.9.9
