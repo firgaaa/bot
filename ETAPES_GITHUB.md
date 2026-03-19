@@ -30,6 +30,6 @@ git commit -m "Initial: ajout des dossiers api et main"
 git push -u origin main
 ```
 
-Le fichier `main/staff.env` ne sera **pas** envoyé (il est dans le `.gitignore`).
+Le fichier `.env` ne sera **pas** envoyé (il est dans le `.gitignore`). Copier `.env.example` en `.env` pour la config.
 
 Quand tu as créé le dépôt "bot" et ton pseudo GitHub, dis-moi et on pourra lancer les commandes ensemble.

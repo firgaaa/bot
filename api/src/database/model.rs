@@ -58,6 +58,8 @@ pub struct Kfc {
     customer_id: String,
     id: Option<String>,
     carte: String,
+    email: Option<String>,
+    nom: Option<String>,
     point: Option<i32>,
     expired_at: Option<chrono::NaiveDateTime>,
     prenom: Option<String>,

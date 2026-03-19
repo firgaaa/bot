@@ -1,0 +1,74 @@
+================================================================================
+ANALYSE DE LA STRUCTURE DU MENU KFC (79027001-pickup-menu.json)
+================================================================================
+
+1. HIERARCHIE COMPLETE DES CATEGORIES (tous les niveaux)
+--------------------------------------------------------------------------------
+Niveau 0: 1 categories
+   - Notre-Carte
+     Chemin: Notre-Carte
+
+Niveau 1: 16 categories
+   - EN CE MOMENT
+     Chemin: Notre-Carte/EN CE MOMENT
+   - LES + POPULAIRES
+     Chemin: Notre-Carte/LES + POPULAIRES
+   - MENUS POULETS & BUCKETS
+     Chemin: Notre-Carte/MENUS POULETS & BUCKETS
+   - MENUS BURGERS
+     Chemin: Notre-Carte/MENUS BURGERS
+   - MENUS WRAPS & SALADES
+     Chemin: Notre-Carte/MENUS WRAPS & SALADES
+   - MENUS BOX
+     Chemin: Notre-Carte/MENUS BOX
+   - DESSERTS
+     Chemin: Notre-Carte/DESSERTS
+   - MENU ENFANT
+     Chemin: Notre-Carte/MENU ENFANT
+   - BONS PLANS
+     Chemin: Notre-Carte/BONS PLANS
+   - PETITS PLAISIRS
+     Chemin: Notre-Carte/PETITS PLAISIRS
+   - A LA CARTE
+     Chemin: Notre-Carte/A LA CARTE
+   - SAUCES
+     Chemin: Notre-Carte/SAUCES
+   - BOISSONS & CAFES
+     Chemin: Notre-Carte/BOISSONS & CAFES
+   - UPSELL
+     Chemin: Notre-Carte/UPSELL
+   - COUPONS
+     Chemin: Notre-Carte/COUPONS
+   - LOYALTY
+     Chemin: Notre-Carte/LOYALTY
+
+2. CATEGORIE LOYALTY
+--------------------------------------------------------------------------------
+   Presente: OUI
+   Emplacement: Notre-Carte/LOYALTY
+
+3. STRUCTURE DE LA CATEGORIE LOYALTY
+--------------------------------------------------------------------------------
+   Sous-categories: Non
+   Nombre de sous-categories: 0
+   Produits: Oui
+   Nombre de produits: 35
+   Exemples de produits (5 premiers):
+     - iTWIST®
+     - Sundae Caramel
+     - Crousti'Kream au Nutella®
+     - Sundae Chocolat Noisette
+     - Cookie Double Choco
+
+4. ECHANTILLON DE 3-5 NOMS DE CATEGORIES PAR NIVEAU
+--------------------------------------------------------------------------------
+Niveau 0:
+   - Notre-Carte
+
+Niveau 1:
+   - EN CE MOMENT
+   - LES + POPULAIRES
+   - MENUS POULETS & BUCKETS
+   - MENUS BURGERS
+   - MENUS WRAPS & SALADES
+   ... (+ 11 autres)

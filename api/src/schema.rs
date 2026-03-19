@@ -62,6 +62,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    nouveau_user (user_id) {
+        user_id -> Int8,
+        #[max_length = 255]
+        username -> Nullable<Varchar>,
+        demande_en_attente -> Bool,
+        nb_tentatives -> Int4,
+        accepte -> Bool,
+        last_demande -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     pending_payments (id) {
         id -> Int4,
         user_id -> Int8,
@@ -76,28 +88,97 @@ diesel::table! {
 }
 
 diesel::table! {
+    session_items (id) {
+        id -> Int4,
+        session_id -> Int4,
+        #[max_length = 255]
+        item_uuid -> Varchar,
+        #[max_length = 255]
+        loyalty_id -> Varchar,
+        #[max_length = 255]
+        name -> Nullable<Varchar>,
+        cost -> Int4,
+        quantity -> Int4,
+        modgrps -> Nullable<Jsonb>,
+        created_at -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
+    sessions (id) {
+        id -> Int4,
+        #[max_length = 255]
+        account_id -> Varchar,
+        account_token -> Text,
+        #[max_length = 255]
+        store_id -> Varchar,
+        #[max_length = 255]
+        store_name -> Nullable<Varchar>,
+        #[max_length = 255]
+        store_city -> Nullable<Varchar>,
+        #[max_length = 255]
+        basket_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        order_uuid -> Nullable<Varchar>,
+        #[max_length = 50]
+        order_number -> Nullable<Varchar>,
+        #[max_length = 50]
+        status -> Varchar,
+        created_at -> Nullable<Timestamptz>,
+        updated_at -> Nullable<Timestamptz>,
+        balance_user -> Int4,
+        balance_basket -> Int4,
+        #[max_length = 255]
+        telegram_user -> Nullable<Varchar>,
+        #[max_length = 255]
+        panier_id -> Varchar,
+        #[max_length = 255]
+        telegram_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        email -> Nullable<Varchar>,
+        #[max_length = 100]
+        phone_number -> Nullable<Varchar>,
+        #[max_length = 255]
+        last_name -> Nullable<Varchar>,
+        #[max_length = 255]
+        first_name -> Nullable<Varchar>,
+        date_of_birth -> Nullable<Date>,
+    }
+}
+
+diesel::table! {
     users (user_id) {
         user_id -> Int8,
-        balance -> Int4,
+        points -> Int4,
         #[max_length = 50]
         role -> Nullable<Varchar>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
         #[max_length = 255]
         username -> Nullable<Varchar>,
-        reduction -> Nullable<Int4>,
+        reduction -> Nullable<Numeric>,
         #[max_length = 64]
         token_publique -> Nullable<Varchar>,
+        #[max_length = 64]
+        token_prive -> Nullable<Varchar>,
+        argent -> Nullable<Int4>,
+        #[max_length = 64]
+        token_parrainage -> Nullable<Varchar>,
+        gain_parrainage -> Nullable<Numeric>,
     }
 }
 
 diesel::joinable!(card_purchase_history -> users (user_id));
 diesel::joinable!(pending_payments -> users (user_id));
+diesel::joinable!(session_items -> sessions (session_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     card_purchase_history,
     config,
     kfc_storage,
+    nouveau_user,
     pending_payments,
+    session_items,
+    sessions,
     users,
 );

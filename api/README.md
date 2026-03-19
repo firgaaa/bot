@@ -26,9 +26,8 @@ cd clemser_kfc_api
 # Build
 cargo build
 
-# Copier le fichier d'exemple et configurer
-cp exemple.env .env
-# Éditer .env avec DATABASE_URL, BASIC_AUTH_USER, BASIC_AUTH_PASSWORD, etc.
+# Configurer : copier .env.example (à la racine du projet) en .env
+# L'API charge .env depuis la racine du projet (BOT/.env)
 
 # Créer la base et lancer les migrations
 createdb kfc_bot

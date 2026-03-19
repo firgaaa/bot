@@ -1,9 +1,10 @@
 # Fichiers sensibles (tokens, mots de passe)
-*.env
+.env
 value.env
 staff.env
 .env.local
 *.env.local
+# .env.example est versionné (template)
 
 # Fichiers système
 .DS_Store

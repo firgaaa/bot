@@ -124,7 +124,7 @@ Si tu as oublié de commit avant de faire `git push`, Git affiche **« Everythin
 
 Le fichier **`.gitignore`** à la racine du projet indique ce qui ne doit pas être versionné, par exemple :
 
-- `value.env`, `staff.env`, `api/.env` (mots de passe, tokens)
+- `.env` (mots de passe, tokens) — `value.env`, `staff.env`, `api/.env` sont dépréciés
 - dossiers `__pycache__/`, `.venv/`, `venv/`
 - fichiers `*.log`
 
@@ -176,15 +176,14 @@ Les fichiers suivants ne sont pas sur GitHub (à cause du `.gitignore`) ; il fau
 
 | Fichier        | Action |
 |----------------|--------|
-| **value.env**  | Copier `value.env.example` en `value.env`, puis remplir les vraies valeurs (tokens, base de données, etc.). |
-| **staff.env**  | Recréer avec le même contenu que sur ton PC principal (données sensibles). |
-| **api/.env**   | Recréer avec les variables nécessaires à l’API (DB, etc.). |
+| **.env**       | Copier `.env.example` en `.env`, puis remplir les vraies valeurs (tokens, base de données, API, etc.). |
+ Recréer avec les variables nécessaires à l’API (DB, etc.). |
 
 Exemple (PowerShell, dans le dossier `bot`) :
 
 ```powershell
-copy value.env.example value.env
-# Puis éditer value.env, staff.env et api\.env avec un éditeur de texte.
+copy .env.example .env
+# Puis éditer .env avec un éditeur de texte.
 ```
 
 ---
@@ -232,4 +231,4 @@ Quand le projet est déjà cloné sur cet autre PC et que tu veux récupérer le
 ## Récapitulatif
 
 - **Partie 1** : créer le dépôt sur GitHub → lier le dossier (`git init` / `git remote add origin ...`) → `git add .` → `git commit -m "..."` → `git push -u origin main`. Ensuite, pour toute mise à jour : `git add` → `git commit` → `git push`.
-- **Partie 2** : sur l’autre PC, **récupérer le projet** = `git clone https://github.com/TON_PSEUDO/bot.git` ; **récupérer les mises à jour** = `cd bot` puis `git pull`. Penser à recréer `value.env`, `staff.env` et `api/.env` après le clone.
+- **Partie 2** : sur l’autre PC, **récupérer le projet** = `git clone https://github.com/TON_PSEUDO/bot.git` ; **récupérer les mises à jour** = `cd bot` puis `git pull`. Penser à recréer `.env` après le clone (copier `.env.example` en `.env`).

@@ -20,10 +20,10 @@ from typing import List, Tuple
 import requests
 from dotenv import load_dotenv
 
-# Charger .env depuis le dossier insert
+# Charger .env depuis la racine du projet
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-load_dotenv(os.path.join(SCRIPT_DIR, ".env"))
-load_dotenv(os.path.join(SCRIPT_DIR, "..", "staff.env"))
+PROJECT_ROOT = os.path.join(SCRIPT_DIR, "..")
+load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 # Champs à ignorer (inutiles pour l'API)
 IGNORED_KEYS = {"url", "jour", "mois", "annee"}
@@ -139,7 +139,7 @@ def insert_one(payload: dict) -> Tuple[str, str]:
     password = os.getenv("KFC_API_PASSWORD") or os.getenv("BASIC_AUTH_PASSWORD")
 
     if not user or not password:
-        return "error", "Credentials API manquants dans .env"
+        return "error", "Credentials API manquants dans .env (KFC_API_USERNAME, KFC_API_PASSWORD ou BASIC_AUTH_*)"
 
     credentials = f"{user}:{password}"
     token = base64.b64encode(credentials.encode()).decode()
