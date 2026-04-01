@@ -3,6 +3,60 @@ Bot Telegram optimisé pour la gestion KFC
 Optimisé en sécurité, vitesse et efficacité de logique
 """
 
+LOYALTY_PRODUCTS = {
+    "loyalty-2385": {"price": 5, "label": "Accompagnements", "name": "Moyennes Frites", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2383": {"price": 5, "label": "Accompagnements", "name": "Cobette® épi de maïs", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-3485": {"price": 5, "label": "Accompagnements", "name": "3 Crousti' Fromage Mozarella", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-3484": {"price": 5, "label": "Accompagnements", "name": "Crousti Fromage Raclette x3", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-3487": {"price": 5, "label": "Accompagnements", "name": "The Onion Rings X5", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2403": {"price": 5, "label": "Accompagnements", "name": "Thé", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2397": {"price": 5, "label": "Accompagnements", "name": "Espresso", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2396": {"price": 5, "label": "Accompagnements", "name": "Double Espresso", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2697": {"price": 5, "label": "gateau", "name": "Cookie Double Choco", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-2323": {"price": 5, "label": "glace", "name": "Crousti'Kream Fraise", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-2321": {"price": 5, "label": "glace", "name": "Crousti'Kream Snickers®", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3440": {"price": 5, "label": "glace", "name": "Crousti'Kream Nutella®", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3289": {"price": 5, "label": "gateau", "name": "Muffin Fondant Noisette", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3472": {"price": 5, "label": "burger", "name": "Crispy Burger Chicken", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3473": {"price": 5, "label": "burger", "name": "Crispy Burger Fish", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-1278": {"price": 5, "label": "burger", "name": "Menu Kentucky® BBQ & Bacon", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-2335": {"price": 5, "label": "bucket", "name": "Bucket 10 Tenders®", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-2337": {"price": 5, "label": "bucket", "name": "Bucket 16 Hot Wings®", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-2405": {"price": 5, "label": "bucket", "name": "Bucket 7 Tenders® + 7 Hot Wings®", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-1279": {"price": 5, "label": "burger", "name": "Menu Double Kentucky Burger", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-1670": {"price": 5, "label": "burger", "name": "Menu Crispy Naan Creamy & Cheese", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-1675": {"price": 5, "label": "burger", "name": "Menu Crispy Spicy Naan Tikka", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-9000": {"price": 5, "label": "bucket", "name": "Menu enfant : P'tit Bucket®", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1259": {"price": 5, "label": "burger", "name": "Menu Colonel Original Veggie", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1162": {"price": 5, "label": "burger", "name": "Menu Tower® Cheese & Bacon", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1050": {"price": 5, "label": "burger", "name": "Menu Boxmaster® Original", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1051": {"price": 5, "label": "burger", "name": "Menu Boxmaster® Spicy", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1254": {"price": 5, "label": "burger", "name": "Menu Colonel® Original", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-2302": {"price": 5, "label": "bucket", "name": "Menu 5 Tenders®", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-2103": {"price": 5, "label": "bucket", "name": "Menu 8 Hot Wings®", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-3470": {"price": 5, "label": "burger", "name": "iTWIST®", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-2368": {"price": 5, "label": "Accompagnements", "name": "Kentucky® Fries", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3482": {"price": 5, "label": "Accompagnements", "name": "2 Tenders", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3481": {"price": 5, "label": "Accompagnements", "name": "3 Hot Wings", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3478": {"price": 5, "label": "burger", "name": "Krunchy®", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-2516": {"price": 5, "label": "glace", "name": "Sundae Chocolat Noisette", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3441": {"price": 5, "label": "glace", "name": "Sundae Caramel", "cost": 300, "categorie": "PETIT CREUX"},
+}
+
+# Source produit locale (table/dictionnaire de référence pour l'interface Click&Collect)
+PRODUCT = LOYALTY_PRODUCTS
+PRODUCT_LABEL_ORDER = ("glace", "burger", "bucket", "gateau", "Accompagnements", "inconnu")
+
+
+def get_product_price(loyalty_id: str) -> float:
+    """Retourne le prix (argent) depuis PRODUCT pour un loyalty_id."""
+    item = PRODUCT.get(str(loyalty_id), {})
+    raw_price = item.get("price", 0)
+    try:
+        return float(raw_price)
+    except (TypeError, ValueError):
+        return 0.0
+
 import logging
 import os
 import psycopg2
@@ -103,8 +157,6 @@ DEFAULT_POINT_MIN: Final[int] = 150  # Minimum de points (par défaut)
 DEFAULT_POINT_MAX: Final[int] = 2500  # Maximum de points (par défaut)
 POINT_INCREMENT: Final[int] = 50  # Palier de points (fixe)
 DEFAULT_CARD_MARGIN: Final[int] = 300  # Marge par défaut pour l'achat de cartes (points supplémentaires)
-PARRAINAGE_BONUS_POINTS: Final[int] = 250  # Points gagnés en rejoignant par lien ou en ajoutant un code parrain
-PARRAINAGE_MIN_FOR_ARGENT: Final[int] = 5400  # Minimum de points parrainage pour option conversion ARGENT
 
 # Table de prix par palier (prix pour 1 point, en euros)
 # La clé représente le palier minimum de points atteint.
@@ -224,7 +276,6 @@ CONFIG_KEY_TO_ENV: Final[Dict[str, str]] = {
     "payment_url": "CONFIG_PAYMENT_URL",
     "staff_channel_id": "CONFIG_STAFF_CHANNEL_ID",
     "staff_thread_payment": "CONFIG_STAFF_THREAD_PAYMENT",
-    "staff_thread_report": "CONFIG_STAFF_THREAD_REPORT",
     "staff_thread_entretien": "CONFIG_STAFF_THREAD_ENTRETIEN",
     "staff_thread_demande_access": "CONFIG_STAFF_THREAD_DEMANDE_ACCESS",
     "emergency_stop": "CONFIG_EMERGENCY_STOP",
@@ -575,10 +626,7 @@ def get_user_info(user_id: int) -> Optional[dict]:
                 return {
                     'user_id': row[0],
                     'username': row[1],
-                    # Nouveau nom
                     'points': points_val,
-                    # Alias compat (certaines parties du bot utilisent encore 'balance')
-                    'balance': points_val,
                     'role': row[3],
                     'reduction': reduction_val,
                     'created_at': row[5],
@@ -642,12 +690,6 @@ def update_user_points(user_id: int, points_to_add: int) -> bool:
         return False
 
 
-def update_user_balance(user_id: int, points_to_add: int, allow_negative_until: Optional[int] = None) -> bool:
-    """Alias compat : l'ancien 'balance' s'appelle désormais 'points'. allow_negative_until ignoré."""
-    _ = allow_negative_until
-    return update_user_points(user_id, points_to_add)
-
-
 def get_user_points(user_id: int) -> int:
     """Récupère les points de l'utilisateur"""
     try:
@@ -664,249 +706,6 @@ def get_user_points(user_id: int) -> int:
 def get_user_balance(user_id: int) -> int:
     """Alias compat : ancien nom."""
     return get_user_points(user_id)
-
-
-def get_user_argent(user_id: int) -> int:
-    """Récupère le solde argent de l'utilisateur (peut être négatif)."""
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT COALESCE(argent, 0) FROM users WHERE user_id = %s",
-                (user_id,),
-            )
-            result = cursor.fetchone()
-            return result[0] if result else 0
-    except psycopg2.Error as e:
-        logger.error(f"Erreur lors de la récupération du solde argent pour {user_id}: {e}")
-        return 0
-
-
-def get_required_config_int(key: str) -> int:
-    """
-    Récupère un entier obligatoire depuis la table config.
-    Si la clé est manquante ou vide, lève une exception (le bot ne démarre pas correctement).
-    """
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM config WHERE key = %s", (key,))
-            row = cursor.fetchone()
-            if not row or row[0] is None or str(row[0]).strip() == "":
-                raise RuntimeError(f"Config '{key}' manquante ou vide.")
-            return int(str(row[0]).strip())
-    except Exception as e:
-        logger.error(f"Erreur lors de la récupération de la config requise '{key}': {e}")
-        raise
-
-
-def get_max_decouvert_argent() -> int:
-    """Lit la limite de découvert d'argent depuis la table config."""
-    # On peut utiliser le cache générique si tu veux éviter trop de requêtes :
-    # return int(_get_cached_config("max_decouvert_argent", 0))
-    return get_required_config_int("max_decouvert_argent")
-
-
-def get_user_balance_parrainage(user_id: int) -> int:
-    """Alias compat : ancien nom."""
-    return get_user_argent(user_id)
-
-
-def transfer_argent_to_points(user_id: int, amount: int, min_argent: int) -> bool:
-    """
-    Transfère des unités d'argent vers des points (atomique).
-    - Conversion "stricte" (tous) : min_argent = 0 (pas de négatif)
-    - Emprunt (admin/vendeur) : min_argent = -max_decouvert_argent (découvert autorisé)
-    """
-    if amount <= 0:
-        return False
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT COALESCE(argent, 0) FROM users WHERE user_id = %s FOR UPDATE",
-                (user_id,),
-            )
-            row = cursor.fetchone()
-            if not row:
-                return False
-            new_argent = row[0] - amount
-            if new_argent < min_argent:
-                return False
-            cursor.execute(
-                """UPDATE users SET
-                   argent = COALESCE(argent, 0) - %s,
-                   points = points + %s,
-                   updated_at = CURRENT_TIMESTAMP
-                   WHERE user_id = %s AND (COALESCE(argent, 0) - %s) >= %s""",
-                (amount, amount, user_id, amount, min_argent),
-            )
-            if cursor.rowcount > 0:
-                logger.info(f"Transfert argent->points pour {user_id}: {amount}")
-                return True
-            return False
-    except psycopg2.Error as e:
-        logger.error(f"Erreur transfer_argent_to_points pour {user_id}: {e}")
-        return False
-
-
-def convert_argent_to_points(user_id: int, amount: int) -> bool:
-    """Conversion stricte (tous) : l'argent ne doit pas devenir négatif."""
-    return transfer_argent_to_points(user_id, amount, min_argent=0)
-
-
-def borrow_points_against_argent(user_id: int, amount: int) -> bool:
-    """Emprunt (admin/vendeur) : découvert autorisé sur l'argent."""
-    max_dec = get_max_decouvert_argent()
-    return transfer_argent_to_points(user_id, amount, min_argent=-max_dec)
-
-
-def update_user_argent(user_id: int, amount_to_add: int) -> bool:
-    """Crédite l'argent de l'utilisateur (montant positif uniquement)."""
-    if amount_to_add <= 0:
-        return False
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET argent = COALESCE(argent, 0) + %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
-                (amount_to_add, user_id),
-            )
-            if cursor.rowcount > 0:
-                logger.info(f"Argent mis à jour pour {user_id}: +{amount_to_add}")
-                return True
-            return False
-    except psycopg2.Error as e:
-        logger.error(f"Erreur update_user_argent pour {user_id}: {e}")
-        return False
-
-
-def transfer_parrainage_to_balance(user_id: int, amount: int) -> bool:
-    """Alias compat : ancien nom. ⚠️ Se comporte comme l'emprunt (découvert autorisé)."""
-    return borrow_points_against_argent(user_id, amount)
-
-
-def update_user_balance_parrainage(user_id: int, points_to_add: int) -> bool:
-    """Alias compat : ancien nom."""
-    return update_user_argent(user_id, points_to_add)
-
-
-def credit_parrain_on_purchase(buyer_user_id: int, points_bought: int) -> Optional[tuple[int, int]]:
-    """
-    Si l'acheteur a un parrain, crédite le parrain en argent.
-    Formule: gain_parrainage (du parrain) % * points_bought.
-    Retourne (parrain_user_id, points_credited) si crédité, None sinon.
-    """
-    token_parrain = get_user_token_parrainage(buyer_user_id)
-    if not token_parrain:
-        return None
-    parrain_user_id = get_user_id_by_token_publique(token_parrain)
-    if not parrain_user_id:
-        return None
-    gain = get_user_gain_parrainage(parrain_user_id)
-    points_for_parrain = max(0, int(round(points_bought * gain / 100)))
-    if points_for_parrain <= 0:
-        return None
-    if update_user_argent(parrain_user_id, points_for_parrain):
-        return (parrain_user_id, points_for_parrain)
-    return None
-
-
-def get_user_token_parrainage(user_id: int) -> Optional[str]:
-    """Récupère le token_parrainage (code du parrain) de l'utilisateur. Vide si aucun parrain."""
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT token_parrainage FROM users WHERE user_id = %s",
-                (user_id,),
-            )
-            result = cursor.fetchone()
-            if result and result[0] and str(result[0]).strip():
-                return str(result[0]).strip()
-            return None
-    except psycopg2.Error as e:
-        logger.error(f"Erreur get_user_token_parrainage pour {user_id}: {e}")
-        return None
-
-
-def get_filleuls_count(user_id: int) -> int:
-    """Retourne le nombre de filleuls d'un utilisateur (users dont token_parrainage = son token_publique)."""
-    token_pub = derive_public_token(user_id)
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT COUNT(*) FROM users WHERE token_parrainage = %s",
-                (token_pub,),
-            )
-            result = cursor.fetchone()
-            return result[0] if result else 0
-    except psycopg2.Error as e:
-        logger.error(f"Erreur get_filleuls_count pour {user_id}: {e}")
-        return 0
-
-
-def get_user_id_by_token_publique(token: str) -> Optional[int]:
-    """Retourne le user_id dont token_publique est le token donné, ou None."""
-    if not token or not str(token).strip():
-        return None
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT user_id FROM users WHERE token_publique = %s",
-                (str(token).strip(),),
-            )
-            result = cursor.fetchone()
-            return result[0] if result else None
-    except psycopg2.Error as e:
-        logger.error(f"Erreur get_user_id_by_token_publique: {e}")
-        return None
-
-
-def get_parrain_username(user_id: int) -> Optional[str]:
-    """Retourne le @username du parrain de l'utilisateur, ou None si aucun parrain ou pas de username."""
-    token_parrain = get_user_token_parrainage(user_id)
-    if not token_parrain:
-        return None
-    parrain_uid = get_user_id_by_token_publique(token_parrain)
-    if not parrain_uid:
-        return None
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT username FROM users WHERE user_id = %s", (parrain_uid,))
-            result = cursor.fetchone()
-            if result and result[0] and str(result[0]).strip():
-                uname = str(result[0]).strip()
-                return f"@{uname}" if not uname.startswith("@") else uname
-            return None
-    except psycopg2.Error as e:
-        logger.error(f"Erreur get_parrain_username pour {user_id}: {e}")
-        return None
-
-
-def set_user_token_parrainage(user_id: int, token: str) -> bool:
-    """
-    Enregistre le token_parrainage d'un utilisateur.
-    Ne fait rien si l'utilisateur a déjà un parrain (token_parrainage non vide).
-    Retourne True si mis à jour, False sinon.
-    """
-    if not token or not str(token).strip():
-        return False
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                """UPDATE users SET token_parrainage = %s, updated_at = CURRENT_TIMESTAMP
-                   WHERE user_id = %s AND (token_parrainage IS NULL OR token_parrainage = '')""",
-                (str(token).strip(), user_id),
-            )
-            return cursor.rowcount > 0
-    except psycopg2.Error as e:
-        logger.error(f"Erreur set_user_token_parrainage pour {user_id}: {e}")
-        return False
 
 
 def deduct_user_balance_atomic(user_id: int, points_to_deduct: int) -> bool:
@@ -1317,6 +1116,83 @@ def fetch_click_preview_menu(store_id: str) -> tuple[bool, Optional[Dict[str, An
         return False, None, str(e)
 
 
+def build_click_collect_menu_from_product(click_categories: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Recompose le menu Click&Collect pour l'UI à partir de PRODUCT.
+    - Données UI (name/cost/categorie/label): PRODUCT
+    - Données techniques (modgrps/disponibilité): réponse Click
+    - Produits inconnus: placés dans 'inconnu' et bloqués à l'ajout panier
+    """
+    grouped: Dict[str, List[Dict[str, Any]]] = {label: [] for label in PRODUCT_LABEL_ORDER}
+    seen_ids: set[str] = set()
+
+    for _cat_name, items in (click_categories or {}).items():
+        if not isinstance(items, list):
+            continue
+        for raw_item in items:
+            if not isinstance(raw_item, dict):
+                continue
+            loyalty_id = str(raw_item.get("id", "")).strip()
+            if not loyalty_id:
+                continue
+            if loyalty_id in seen_ids:
+                continue
+            seen_ids.add(loyalty_id)
+
+            raw_name = sanitize_display_name(raw_item.get("name", "?"))
+            raw_cost = raw_item.get("cost", 0)
+            try:
+                raw_cost_int = int(raw_cost)
+            except (TypeError, ValueError):
+                raw_cost_int = 0
+
+            modgrps = raw_item.get("modgrps")
+            if not isinstance(modgrps, list):
+                modgrps = []
+
+            product_data = PRODUCT.get(loyalty_id)
+            if product_data:
+                item_label = str(product_data.get("label") or "inconnu")
+                item_name = sanitize_display_name(product_data.get("name") or raw_name)
+                try:
+                    item_cost = int(product_data.get("cost", raw_cost_int))
+                except (TypeError, ValueError):
+                    item_cost = raw_cost_int
+                item_categorie = str(product_data.get("categorie") or "INCONNU")
+                unknown_product = False
+            else:
+                item_label = "inconnu"
+                item_name = raw_name
+                item_cost = raw_cost_int
+                item_categorie = "INCONNU"
+                unknown_product = True
+
+            if item_label not in grouped:
+                grouped[item_label] = []
+
+            grouped[item_label].append({
+                "id": loyalty_id,
+                "name": item_name,
+                "cost": item_cost,
+                "categorie": item_categorie,
+                "label": item_label,
+                "modgrps": modgrps,
+                "unknown_product": unknown_product,
+                "click_name": raw_name,
+                "click_cost": raw_cost_int,
+            })
+
+    # Conserver un ordre stable: labels connus d'abord, puis tout label additionnel, puis inconnu
+    ordered: Dict[str, List[Dict[str, Any]]] = {}
+    for label in PRODUCT_LABEL_ORDER:
+        if grouped.get(label):
+            ordered[label] = grouped[label]
+    for label, items in grouped.items():
+        if label not in ordered and items:
+            ordered[label] = items
+    return ordered
+
+
 def get_kfc_cards_statistics() -> tuple[Optional[int], Optional[float]]:
     """
     Récupère les statistiques des cartes KFC depuis la base de données.
@@ -1719,16 +1595,6 @@ def update_config_value(key: str, value: any) -> bool:
                     logger.warning(f"ID de thread invalide (doit être un nombre): {value_str}")
                     return False
             value = value_str
-        elif key == "staff_thread_report":
-            # Validation ID de thread (peut être vide ou un entier)
-            value_str = str(value).strip()
-            if value_str:
-                try:
-                    int(value_str)
-                except ValueError:
-                    logger.warning(f"ID de thread invalide (doit être un nombre): {value_str}")
-                    return False
-            value = value_str
         elif key == "staff_thread_entretien":
             value_str = str(value).strip()
             if value_str:
@@ -1945,17 +1811,6 @@ def get_chat_id_from_update(update: Update) -> Optional[int]:
 def get_staff_thread_payment() -> Optional[int]:
     """Récupère l'ID du thread de paiement dans le canal staff (avec cache)"""
     thread_id = _get_cached_config("staff_thread_payment", "")
-    if thread_id:
-        try:
-            return int(thread_id)
-        except ValueError:
-            return None
-    return None
-
-
-def get_staff_thread_report() -> Optional[int]:
-    """Récupère l'ID du thread de report dans le canal staff (avec cache)"""
-    thread_id = _get_cached_config("staff_thread_report", "")
     if thread_id:
         try:
             return int(thread_id)
@@ -2350,6 +2205,99 @@ def get_card_purchase_by_id(record_id: int) -> Optional[tuple]:
         return None
 
 
+def get_user_click_history_count(user_id: int) -> int:
+    """Retourne le nombre de commandes Click&Collect finalisées (SUBMITTED ou +) pour un utilisateur."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COUNT(*)
+                FROM click_order_history
+                WHERE user_id = %s
+                  AND status IN ('SUBMITTED', 'CHECKED_IN', 'COMPLETED', 'FAILED')
+                """,
+                (user_id,),
+            )
+            result = cursor.fetchone()
+            return result[0] if result else 0
+    except psycopg2.Error as e:
+        logger.error(f"Erreur comptage historique click: {e}")
+        return 0
+
+
+def get_user_click_history(user_id: int, limit: int = 5, offset: int = 0) -> list:
+    """
+    Récupère l'historique Click&Collect d'un utilisateur (SUBMITTED ou +), trié du plus récent au plus ancien.
+    Retourne une liste de (id, order_number, total_points, submitted_at, store_name, status).
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, order_number, total_points, submitted_at, store_name, status
+                FROM click_order_history
+                WHERE user_id = %s
+                  AND status IN ('SUBMITTED', 'CHECKED_IN', 'COMPLETED', 'FAILED')
+                ORDER BY submitted_at DESC
+                LIMIT %s OFFSET %s
+                """,
+                (user_id, limit, offset),
+            )
+            return cursor.fetchall()
+    except psycopg2.Error as e:
+        logger.error(f"Erreur récupération historique click: {e}")
+        return []
+
+
+def get_click_history_by_id(record_id: int) -> Optional[tuple]:
+    """
+    Récupère un enregistrement d'historique Click&Collect par id.
+    Retourne None si introuvable.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, user_id, panier_id, order_uuid, order_number, confirmation_url, status,
+                       store_id, store_name, store_city, account_id, telegram_user, email, phone_number,
+                       last_name, first_name, date_of_birth, total_points, submitted_at
+                FROM click_order_history
+                WHERE id = %s
+                """,
+                (record_id,),
+            )
+            return cursor.fetchone()
+    except psycopg2.Error as e:
+        logger.error(f"Erreur get_click_history_by_id: {e}")
+        return None
+
+
+def get_click_history_items(record_id: int) -> list:
+    """
+    Récupère les lignes articles d'un historique Click&Collect.
+    Retourne une liste de (name, cost, quantity, line_total_points).
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT name, cost, quantity, line_total_points
+                FROM click_order_history_items
+                WHERE history_id = %s
+                ORDER BY id ASC
+                """,
+                (record_id,),
+            )
+            return cursor.fetchall()
+    except psycopg2.Error as e:
+        logger.error(f"Erreur get_click_history_items: {e}")
+        return []
+
+
 def get_kfc_storage_by_customer_id(customer_id: str) -> Optional[dict]:
     """
     Récupère une ligne de kfc_storage par customer_id (unique).
@@ -2404,7 +2352,7 @@ def _build_hist_points_keyboard(rows: list, user_id: int, page: int, page_size: 
     keyboard = []
     for (pid, points, created_at) in rows:
         d = _format_hist_date(created_at)
-        keyboard.append([InlineKeyboardButton(f"{d} : {points} pts", callback_data=f"hist_points_detail_{pid}")])
+        keyboard.append([InlineKeyboardButton(f"{d} : {points} argent", callback_data=f"hist_points_detail_{pid}")])
     next_rows = get_user_payment_history(user_id, limit=page_size, offset=(page + 1) * page_size)
     nav = []
     if page > 0:
@@ -2429,6 +2377,28 @@ def _build_hist_cartes_keyboard(rows: list, user_id: int, page: int, page_size: 
         nav.append(InlineKeyboardButton("◀ 5 suivantes", callback_data=f"hist_cartes_page_{page - 1}"))
     if next_rows:
         nav.append(InlineKeyboardButton("▶ 5 précédentes", callback_data=f"hist_cartes_page_{page + 1}"))
+    if nav:
+        keyboard.append(nav)
+    keyboard.append([InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")])
+    return keyboard
+
+
+def _build_hist_click_keyboard(rows: list, user_id: int, page: int, page_size: int) -> list:
+    """Construit le clavier pour une page de l'historique Click&Collect."""
+    keyboard = []
+    for (rid, order_number, total_points, submitted_at, store_name, status) in rows:
+        d = _format_hist_date(submitted_at)
+        order_txt = f"#{order_number}" if order_number else "N/A"
+        status_txt = (status or "?").upper()
+        store_txt = sanitize_display_name(store_name or "KFC")
+        label = f"{d} : {order_txt} • {total_points} pts • {store_txt} • {status_txt}"
+        keyboard.append([InlineKeyboardButton(label[:64], callback_data=f"hist_click_detail_{rid}")])
+    next_rows = get_user_click_history(user_id, limit=page_size, offset=(page + 1) * page_size)
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("◀ 5 suivantes", callback_data=f"hist_click_page_{page - 1}"))
+    if next_rows:
+        nav.append(InlineKeyboardButton("▶ 5 précédentes", callback_data=f"hist_click_page_{page + 1}"))
     if nav:
         keyboard.append(nav)
     keyboard.append([InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")])
@@ -2575,8 +2545,8 @@ def has_user_pending_payment_in_db(user_id: int) -> bool:
 def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
     """
     Accepte un paiement de manière atomique dans une seule transaction.
-    Vérifie le statut, ajoute les points, et met à jour le statut en une seule opération.
-    Retourne (user_id, points, new_balance) si succès, None si échec (déjà traité ou erreur).
+    Vérifie le statut, crédite le solde utilisateur, et met à jour le statut en une seule opération.
+    Retourne (user_id, credited_amount, new_balance) si succès, None si échec.
     """
     try:
         with get_db_connection() as conn:
@@ -2584,7 +2554,7 @@ def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
             
             # Lock explicite sur la transaction avec FOR UPDATE pour éviter les doubles traitements
             cursor.execute("""
-                SELECT id, user_id, points, status 
+                SELECT id, user_id, points, price, status 
                 FROM pending_payments 
                 WHERE id = %s AND status = 'pending'
                 FOR UPDATE
@@ -2596,11 +2566,19 @@ def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
                 # Transaction déjà traitée ou introuvable
                 return None
             
-            _, user_id, points, _ = payment
+            _, user_id, points, price, _ = payment
+            # Nouvelle logique achat: 1€ payé = 1 argent crédité.
+            # On crédite selon le prix, avec fallback historique sur "points".
+            try:
+                credited_amount = int(round(float(price))) if price is not None else 0
+            except (TypeError, ValueError):
+                credited_amount = 0
+            if credited_amount <= 0:
+                credited_amount = int(points or 0)
             
             # Vérifier que l'utilisateur existe et lock sur la ligne utilisateur
             cursor.execute(
-                "SELECT balance FROM users WHERE user_id = %s FOR UPDATE",
+                "SELECT points FROM users WHERE user_id = %s FOR UPDATE",
                 (user_id,)
             )
             user_result = cursor.fetchone()
@@ -2612,15 +2590,15 @@ def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
             # Mise à jour atomique : solde + points et statut de la transaction
             cursor.execute("""
                 UPDATE users 
-                SET balance = balance + %s, updated_at = CURRENT_TIMESTAMP 
+                SET points = points + %s, updated_at = CURRENT_TIMESTAMP 
                 WHERE user_id = %s
-            """, (points, user_id))
+            """, (credited_amount, user_id))
             
             if cursor.rowcount == 0:
                 return None
             
             # Récupérer le nouveau solde
-            cursor.execute("SELECT balance FROM users WHERE user_id = %s", (user_id,))
+            cursor.execute("SELECT points FROM users WHERE user_id = %s", (user_id,))
             new_balance = cursor.fetchone()[0]
             
             # Mettre à jour le statut de la transaction
@@ -2635,8 +2613,8 @@ def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
                 conn.rollback()
                 return None
             
-            logger.info(f"Paiement {payment_id} accepté atomiquement: user_id={user_id}, points={points}, new_balance={new_balance}")
-            return (user_id, points, new_balance)
+            logger.info(f"Paiement {payment_id} accepté atomiquement: user_id={user_id}, argent={credited_amount}, new_balance={new_balance}")
+            return (user_id, credited_amount, new_balance)
             
     except psycopg2.Error as e:
         logger.error(f"Erreur lors de l'acceptation atomique du paiement {payment_id}: {e}")
@@ -2718,7 +2696,7 @@ def set_user_role(user_id: int, role: str) -> bool:
             if not cursor.fetchone():
                 # Créer l'utilisateur s'il n'existe pas
                 cursor.execute(
-                    "INSERT INTO users (user_id, balance, role) VALUES (%s, 0, %s) ON CONFLICT (user_id) DO UPDATE SET role = %s, updated_at = CURRENT_TIMESTAMP",
+                    "INSERT INTO users (user_id, points, role) VALUES (%s, 0, %s) ON CONFLICT (user_id) DO UPDATE SET role = %s, updated_at = CURRENT_TIMESTAMP",
                     (user_id, role, role)
                 )
             else:
@@ -2836,50 +2814,6 @@ def get_user_reduction(user_id: int) -> float:
         return 0.0
 
 
-def get_user_gain_parrainage(user_id: int) -> float:
-    """Récupère le gain parrainage d'un utilisateur (0-100, 2 décimales). Défaut 10."""
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT COALESCE(gain_parrainage, 10) FROM users WHERE user_id = %s",
-                (user_id,),
-            )
-            row = cursor.fetchone()
-            if row and row[0] is not None:
-                return round(float(row[0]), 2)
-            return 10.0
-    except psycopg2.Error as e:
-        logger.error(f"Erreur lors de la récupération du gain parrainage pour user_id={user_id}: {e}")
-        return 10.0
-
-
-def set_user_gain_parrainage(user_id: int, gain: float) -> bool:
-    """Définit le gain parrainage d'un utilisateur (0-100, 2 décimales)"""
-    if gain < 0 or gain > 100:
-        logger.warning(f"Tentative de définir un gain parrainage invalide: {gain}")
-        return False
-    gain = round(gain, 2)
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-            if not cursor.fetchone():
-                cursor.execute(
-                    "INSERT INTO users (user_id, balance, gain_parrainage) VALUES (%s, 0, %s) ON CONFLICT (user_id) DO UPDATE SET gain_parrainage = EXCLUDED.gain_parrainage, updated_at = CURRENT_TIMESTAMP",
-                    (user_id, gain),
-                )
-            else:
-                cursor.execute(
-                    "UPDATE users SET gain_parrainage = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
-                    (gain, user_id),
-                )
-            return True
-    except psycopg2.Error as e:
-        logger.error(f"Erreur lors de la définition du gain parrainage pour user_id={user_id}: {e}")
-        return False
-
-
 def set_user_reduction(user_id: int, reduction: float) -> bool:
     """Définit le taux de réduction d'un utilisateur (0-100, 2 décimales)"""
     if reduction < 0 or reduction > 100:
@@ -2952,22 +2886,10 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "cmd_panel_vendeur",
             "cmd_annonce",
             "cmd_moi",
-            "cmd_parrainage",
-            "parrainage_add",
-            "parrainage_cancel",
-            "parrainage_mon_parrain",
-            "parrainage_mes_filleuls",
-            "parrainage_obtenir_lien",
-            "parrainage_convertir",
-            "parrainage_convertir_point",
-            "parrainage_convertir_argent",
-            "parrainage_convertir_confirm",
-            "parrainage_convertir_cancel",
-            "parrainage_convertir_noop",
             "cmd_historique",
-            "credit_points",
             "hist_points",
             "hist_cartes",
+            "hist_click",
             "cmd_acheter_points",
             "cmd_boutique",
             "boutique_click_collect",
@@ -2986,8 +2908,6 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
             "click_collect_submit_info_back",
             "click_collect_modgrps_cancel",
             "click_collect_remove_cancel",
-        "cmd_report",
-        "cmd_calc",
         "points_inc",
         "points_dec",
         "points_validate",
@@ -3012,7 +2932,6 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "config_payment_url_edit",
         "config_staff_channel_edit",
         "config_staff_thread_payment_edit",
-        "config_staff_thread_report_edit",
         "config_staff_thread_demande_access_edit",
         "config_annonce_text_edit",
         "config_annonce_photo_edit",
@@ -3020,11 +2939,6 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "payment_accept",
         "payment_refuse",
         "cancel_payment",
-        "report_type_achat",
-        "report_type_achat_points",
-        "report_type_achat_carte",
-        "report_type_bot",
-        "report_type_autre",
         "role_list_vendeur",
         "role_list_moderator",
         "role_list_reduction",
@@ -3035,9 +2949,7 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "role_remove_vendeur",
         "role_remove_moderator",
         "role_reduction_edit",
-        "role_gain_parrainage_edit",
         "vendeur_reduction_skip",
-        "vendeur_gain_parrainage_skip",
         "user_list",
         "user_info",
         "user_list_page",
@@ -3070,15 +2982,6 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         try:
             payment_id = int(callback_data.split("_")[-1])
             if payment_id > 0:
-                return True
-        except (ValueError, IndexError):
-            return False
-    
-    if callback_data.startswith("report_reply_") or callback_data.startswith("report_ignore_"):
-        # Les report_id sont au format user_id_timestamp
-        try:
-            report_id = callback_data.split("_", 2)[2]  # Prendre tout après report_reply_ ou report_ignore_
-            if report_id and len(report_id) > 0:
                 return True
         except (ValueError, IndexError):
             return False
@@ -3169,7 +3072,7 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         except (ValueError, IndexError):
             return False
 
-    if callback_data.startswith("hist_points_page_") or callback_data.startswith("hist_cartes_page_"):
+    if callback_data.startswith("hist_points_page_") or callback_data.startswith("hist_cartes_page_") or callback_data.startswith("hist_click_page_"):
         try:
             page = int(callback_data.split("_")[-1])
             if page >= 0:
@@ -3177,7 +3080,7 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         except (ValueError, IndexError):
             return False
 
-    if callback_data.startswith("hist_points_detail_") or callback_data.startswith("hist_cartes_detail_"):
+    if callback_data.startswith("hist_points_detail_") or callback_data.startswith("hist_cartes_detail_") or callback_data.startswith("hist_click_detail_"):
         try:
             pid = int(callback_data.split("_")[-1])
             if pid > 0:
@@ -3211,7 +3114,7 @@ def sanitize_text(text: Optional[str], max_length: int = 4096) -> str:
 def escape_markdown(text: Optional[str]) -> str:
     """
     Échappe le Markdown "classique" (parse_mode="Markdown") pour éviter les casses d'affichage
-    quand on injecte des données utilisateur (nom, username, report, etc.).
+    quand on injecte des données utilisateur (nom, username, message, etc.).
     """
     if text is None:
         return ""
@@ -3224,7 +3127,7 @@ def escape_markdown(text: Optional[str]) -> str:
 def escape_html(text: Optional[str]) -> str:
     """
     Échappe le HTML (parse_mode="HTML") pour éviter les injections XSS
-    quand on injecte des données utilisateur (nom, username, report, etc.).
+    quand on injecte des données utilisateur (nom, username, message, etc.).
     """
     if text is None:
         return ""
@@ -3255,6 +3158,21 @@ def sanitize_display_name(text: Optional[str]) -> str:
     # Espaces multiples ou en trop
     s = re.sub(r"\s+", " ", s).strip()
     return s if s else "?"
+
+
+def mask_phone_for_click_display(phone: Optional[str]) -> str:
+    """
+    Masque un numéro de téléphone pour l'affichage Click&Collect.
+    Format cible: xxxxx* **xx (5 premiers + masquage + 2 derniers).
+    """
+    if not phone:
+        return "—"
+    digits = re.sub(r"\D", "", str(phone))
+    if len(digits) < 4:
+        return "*" * len(digits) if digits else "—"
+    if len(digits) <= 7:
+        return f"{digits[0]}* **{digits[-2:]}"
+    return f"{digits[:2]} {digits[2:4]} {digits[4:5]}* ** {digits[-2:]}"
 
 
 # ========== SYSTÈME ESTHÉTIQUE ==========
@@ -3512,10 +3430,9 @@ def require_role_for_callback(role: str, callback_data: str) -> bool:
         "config_max_edit",
         "config_payment_url_edit",
         "config_staff_channel_edit",
-    "config_staff_thread_payment_edit",
-    "config_staff_thread_report_edit",
-    "config_staff_thread_entretien_edit",
-    "config_staff_thread_demande_access_edit",
+        "config_staff_thread_payment_edit",
+        "config_staff_thread_entretien_edit",
+        "config_staff_thread_demande_access_edit",
     }
     admin_only_prefixes = (
         "payment_accept_",
@@ -3710,18 +3627,13 @@ async def show_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     keyboard = [
         # Catégorie ACHATS (orange)
         [
-            InlineKeyboardButton("💰 Acheter points", callback_data="cmd_acheter_points"),
+            InlineKeyboardButton("💰 Acheter argent", callback_data="cmd_acheter_points"),
             InlineKeyboardButton("🛒 Boutique", callback_data="cmd_boutique")
         ],
         # Catégorie INFORMATIONS (bleu)
         [
             InlineKeyboardButton("📢 Annonces", callback_data="cmd_annonce"),
             InlineKeyboardButton("👤 Mon Profil", callback_data="cmd_moi")
-        ],
-        # Catégorie AIDE (vert)
-        [
-            InlineKeyboardButton("📝 Signaler", callback_data="cmd_report"),
-            InlineKeyboardButton("🧮 Calculatrice", callback_data="cmd_calc")
         ],
         # Navigation (neutre)
         [InlineKeyboardButton("🔙 Menu principal", callback_data="menu_principal")]
@@ -4059,7 +3971,8 @@ async def _do_select_store_and_load_menu(
         await safe_edit_message_text(query, f"{header}\n\n{escape_html(err_msg or 'Erreur inconnue')}", InlineKeyboardMarkup(keyboard), "HTML")
         return
 
-    categories = menu_data.get("categories") or {}
+    click_categories = menu_data.get("categories") or {}
+    categories = build_click_collect_menu_from_product(click_categories)
     context.user_data['click_collect_preview_menu'] = categories
     context.user_data['click_collect_selected_store'] = store
 
@@ -4104,7 +4017,7 @@ async def _do_recup_token_and_session(
 ) -> None:
     """
     Appelle recup_token avec la carte et le prénom utilisateur.
-    Si succès : crée la session Flask, ajoute les articles, affiche « Valider mon achat ».
+    Si succès : crée la session Flask, ajoute les articles, puis checkout+submit automatiquement.
     Si erreur : affiche message d'erreur avec Réessayer (même carte) / Retour au panier.
     """
     panier_id = context.user_data.get('click_collect_panier_id')
@@ -4222,15 +4135,105 @@ async def _do_recup_token_and_session(
     context.user_data.pop('click_collect_card_for_token', None)
     context.user_data.pop('click_collect_prenom', None)
 
-    header = format_header_rich("PANIER PRÊT", "🛒", "success", banner=False)
+    # Plus d'étape intermédiaire "Valider mon achat":
+    # on enchaîne directement checkout + submit après saisie du prénom.
+    if query_or_none:
+        await safe_edit_message_text(query_or_none, "⏳ Validation en cours (checkout + soumission)...", None, "HTML")
+
+    ok_checkout, err_checkout = fetch_click_checkout(str(panier_id))
+    if not ok_checkout:
+        header = format_header_rich("ERREUR CHECKOUT", "❌", "orange", banner=False)
+        keyboard = [
+            [InlineKeyboardButton("🔙 Retour au panier", callback_data="click_collect_panier")],
+            [InlineKeyboardButton("🏠 Accueil", callback_data="cmd_shop")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if query_or_none:
+            await safe_edit_message_text(query_or_none, f"{header}\n\n{escape_html(err_checkout or 'Erreur inconnue')}", reply_markup, "HTML")
+        elif update_or_none and update_or_none.message:
+            await update_or_none.message.reply_text(f"{header}\n\n{escape_html(err_checkout or 'Erreur inconnue')}", reply_markup=reply_markup, parse_mode="HTML")
+        return
+
+    ok_submit, data_submit, err_submit = fetch_click_submit(str(panier_id))
+    if not ok_submit:
+        header = format_header_rich("ERREUR SOUMISSION", "❌", "orange", banner=False)
+        keyboard = [
+            [InlineKeyboardButton("🔙 Retour au panier", callback_data="click_collect_panier")],
+            [InlineKeyboardButton("🏠 Accueil", callback_data="cmd_shop")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if query_or_none:
+            await safe_edit_message_text(query_or_none, f"{header}\n\n{escape_html(err_submit or 'Erreur inconnue')}", reply_markup, "HTML")
+        elif update_or_none and update_or_none.message:
+            await update_or_none.message.reply_text(f"{header}\n\n{escape_html(err_submit or 'Erreur inconnue')}", reply_markup=reply_markup, parse_mode="HTML")
+        return
+
+    # Débit local du solde utilisateur (argent consommé par le panier)
+    try:
+        total_argent = 0.0
+        for e in cart_list:
+            raw_price = e.get("price", get_product_price(str(e.get("id", ""))))
+            try:
+                unit_price = float(raw_price)
+            except (TypeError, ValueError):
+                unit_price = 0.0
+            try:
+                qty = int(e.get("quantity", 1))
+            except (TypeError, ValueError):
+                qty = 1
+            total_argent += unit_price * max(1, qty)
+        if total_argent > 0:
+            debit_amount = int(round(total_argent))
+            ok_debit = update_user_points(user_id, -debit_amount)
+            if not ok_debit:
+                logger.warning(
+                    f"Échec du débit local de {debit_amount} argent pour l'utilisateur {user_id} "
+                    f"après submit Click&Collect (panier_id={panier_id})"
+                )
+    except Exception as e:
+        logger.error(
+            f"Exception lors du débit local de l'argent pour l'utilisateur {user_id} "
+            f"après submit Click&Collect (panier_id={panier_id}): {e}"
+        )
+
+    role_for_submit = get_effective_role(user_id, context)
+    conf_url = (data_submit or {}).get("confirmation_url") if data_submit else None
+    first_name = (data_submit or {}).get("first_name") if data_submit else None
+    last_name = (data_submit or {}).get("last_name") if data_submit else None
+    order_number = (data_submit or {}).get("order_number") if data_submit else None
+    phone_number = (data_submit or {}).get("phone_number") if data_submit else None
+    selected_store = context.user_data.get("click_collect_selected_store") or {}
+    store_name = (data_submit or {}).get("store_name") if data_submit else None
+    store_city = (data_submit or {}).get("store_city") if data_submit else None
+    if not store_name:
+        store_name = selected_store.get("name")
+    if not store_city:
+        store_city = selected_store.get("city")
+    first_name_display = escape_html(str(first_name)) if first_name else "—"
+    last_name_display = escape_html(str(last_name)) if last_name else "—"
+    order_number_display = escape_html(str(order_number)) if order_number else "—"
+    phone_masked = escape_html(mask_phone_for_click_display(phone_number))
+    store_name_display = escape_html(str(store_name)) if store_name else "—"
+    store_city_display = escape_html(str(store_city)) if store_city else "—"
+    context.user_data["click_collect_last_submit_info"] = data_submit
+    header = format_header_rich("COMMANDE TERMINÉE", "✅", "success", banner=False)
     msg = (
-        "\n\nPanier kfc créé avec succès !\n"
-        "Cliquez sur <b>Valider mon achat</b> pour soumettre la commande et finaliser votre achat."
-        f"\n - Référence : <code>{escape_html(str(panier_id))}</code>"
+        f"\n"
+        f" N° commande : {order_number_display}\n"
+        f"👤 Nom : {first_name_display} {last_name_display}\n"
+        f"📱 Téléphone : {phone_masked}\n\n"
+        f"🍗 KFC : {store_name_display}\n"
+        f"📍 Ville : {store_city_display}\n\n"
+        f"🔗 Commande :\n{escape_html(conf_url or '—')}"
     )
     if add_errors:
-        msg += "\n\n⚠️ Erreurs lors de l'ajout : " + ", ".join(add_errors[:3])
-    keyboard = [[InlineKeyboardButton("✅ Valider mon achat", callback_data="click_collect_validate")]]
+        msg += "\n\n⚠️ Erreurs lors de l'ajout de certains articles : " + ", ".join(add_errors[:3])
+    keyboard = [
+        [InlineKeyboardButton("⏱ Lancer la préparation (3min)", callback_data="click_collect_3min")],
+        [InlineKeyboardButton("🏠 Accueil", callback_data="cmd_shop")],
+    ]
+    if role_for_submit == "admin":
+        keyboard.insert(1, [InlineKeyboardButton("📋 Voir toutes les infos", callback_data="click_collect_show_submit_info")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     if query_or_none:
         await safe_edit_message_text(query_or_none, f"{header}\n\n{msg}", reply_markup, "HTML")
@@ -4356,10 +4359,10 @@ async def show_points_formula_choice(update: Update, context: ContextTypes.DEFAU
         logger.warning("show_points_formula_choice appelé sans utilisateur valide")
         return
 
-    header = format_header_rich("ACHAT DE POINTS", "💰", "orange", banner=False)
+    header = format_header_rich("ACHAT D'ARGENT", "💰", "orange", banner=False)
     intro = format_section_rich(
         "Choisissez une formule",
-        "Sélectionnez le type d'achat pour partir avec une quantité de points adaptée. Vous pourrez ensuite ajuster !",
+        "Sélectionnez le type d'achat pour partir avec une quantité d'argent adaptée. Vous pourrez ensuite ajuster !",
         "✨",
         "orange"
     )
@@ -4402,20 +4405,13 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     # Limiter aux bornes
     selected_points = max(point_min, min(point_max, selected_points))
     
-    # Appliquer la réduction de l'utilisateur et calculer le prix
-    user_reduction = get_user_reduction(user_id)
-    price_initial, price_euros = compute_points_price(selected_points, user_reduction)
-    price_per_point = get_price_per_point(selected_points)
-    base_unit_price = 0.005  # Prix de base de référence pour 1 point
-    if price_per_point > 0:
-        # Montant réellement payé pour un panier "théorique" de 100€ au tarif de base,
-        # en se basant sur le prix unitaire actuel par rapport au prix de base.
-        effective_100 = 100 * (price_per_point / base_unit_price)
-    else:
-        effective_100 = 100.0
+    # Nouvelle logique simplifiée: 1€ payé = 1 argent crédité.
+    user_reduction = 0.0
+    price_initial = float(selected_points)
+    price_euros = float(selected_points)
     
     # Construire le message avec le nouveau système esthétique
-    header = format_header_rich("ACHAT DE POINTS 💰", "💰", "orange", banner=False)
+    header = format_header_rich("ACHAT D'ARGENT 💰", "💰", "orange", banner=False)
     
     # Section sélection mise en évidence
     selection_box = format_section_rich(
@@ -4426,18 +4422,13 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     )
     
     # Section prix mise en évidence
-    if user_reduction > 0:
-        price_box = f"<b>- Total : </b>{price_euros:.2f} €"
-        reduction_info = f"\n<b>- Prix initial : </b>{price_initial:.2f} €"
-    else:
-        price_box = f"<b>- Total : </b>{price_euros:.2f} €"
-        reduction_info = ""
+    price_box = f"<b>- Total : </b>{price_euros:.2f} €"
+    reduction_info = ""
     
     # Informations en section normale
     info_text = (
-        f"💡 Si tu achetais l'équivalent de 100€ au tarif de base , "
-        f"avec ton tarif actuel tu paye : <b>{effective_100:.2f}€</b>\n\n"
-        f"<i>Utilisez les boutons ci-dessous pour ajuster</i>"
+        "💡 Règle appliquée : <b>1€ payé = 1 argent crédité</b>.\n\n"
+        "<i>Utilisez les boutons ci-dessous pour ajuster</i>"
     )
     info_section = format_section_rich(
         "Informations",
@@ -4446,7 +4437,7 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
         "info"
     )
     
-    message = f"{header}\n\n\n{selection_box}\n- <b>{selected_points} points</b>\n{price_box}{reduction_info}\n\n{info_section}"
+    message = f"{header}\n\n\n{selection_box}\n- <b>{selected_points} argent</b>\n{price_box}{reduction_info}\n\n{info_section}"
     
     # Boutons organisés visuellement
     keyboard = [
@@ -4466,7 +4457,7 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     try:
         file_id = await get_or_upload_points_banner(context)
         await edit_or_send_message(update, message, reply_markup, "HTML", file_id)
-        logger.info(f"Interface d'achat de points affichée pour l'utilisateur {user_id} ({selected_points} points)")
+        logger.info(f"Interface d'achat d'argent affichée pour l'utilisateur {user_id} ({selected_points} argent)")
     except TelegramError as e:
         # Gérer silencieusement MessageNotModified (clic trop rapide)
         if "message is not modified" not in str(e).lower():
@@ -4578,11 +4569,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     context.user_data.pop(f'waiting_payment_{user_id}', None)
     context.user_data.pop(f'pending_payment_{user_id}', None)
     context.user_data.pop(f'summary_message_id_{user_id}', None)
-    context.user_data.pop(f'waiting_report_{user_id}', None)
-    context.user_data.pop(f'report_type_{user_id}', None)
-    context.user_data.pop(f'waiting_parrainage_code_{user_id}', None)
-    context.user_data.pop(f'waiting_parrainage_convert_amount_{user_id}', None)
-    context.user_data.pop(f'parrainage_convert_amount_{user_id}', None)
     context.user_data.pop('config_edit', None)
     
     # Accès privé : si l'utilisateur n'est pas dans la table users, afficher la page "demande d'accès"
@@ -4594,31 +4580,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     username = user.username if user.username else None
     balance, is_new = get_or_create_user(user_id, username)
 
-    # Lien d'invitation parrainage : /start ref_TOKEN
-    parrain_added_via_link = False
-    text = (update.message.text or "").strip()
-    if text.startswith("/start ref_") and len(text) > 11:
-        ref_token = text[11:].strip().split()[0] if " " in text[11:] else text[11:].strip()
-        if ref_token:
-            parrain_user_id = get_user_id_by_token_publique(ref_token)
-            if parrain_user_id and parrain_user_id != user_id:
-                token_parrain = get_user_token_parrainage(user_id)
-                if not token_parrain and set_user_token_parrainage(user_id, ref_token):
-                    parrain_added_via_link = True
-                    update_user_balance(user_id, PARRAINAGE_BONUS_POINTS)
-                    first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "Un utilisateur"
-                    username_str = f"@{escape_html(user.username)}" if user.username else ""
-                    parrain_msg = (
-                        f"🎁 <b>Nouveau filleul !</b>\n\n"
-                        f"Un utilisateur s'est inscrit avec votre lien d'invitation.\n\n"
-                        f"👤 {first_name}"
-                    )
-                    if username_str:
-                        parrain_msg += f"\n📱 {username_str}"
-                    parrain_msg += f"\n🆔 ID : <code>{user_id}</code>"
-                    await send_notification(context.bot, parrain_user_id, parrain_msg)
-                    logger.info(f"Parrain {parrain_user_id} enregistré pour user {user_id} via lien")
-    
     # Si c'est un membre normal, afficher message de bienvenu et rediriger vers shop
     if role == "user":
         first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "Utilisateur"
@@ -4635,8 +4596,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         footer = "\n✨ Accédez au shop pour découvrir toutes nos fonctionnalités !"
         if USE_TEST_CLICK_ACCOUNT:
             footer += "\n\n<b>[Mode test Click&Collect]</b> – les commandes Click&Collect utilisent un compte fidélité de test."
-        if parrain_added_via_link:
-            footer = f"\n🎁 Votre parrain a été enregistré ! Vous venez de gagner {PARRAINAGE_BONUS_POINTS} points !\n\n" + footer
         
         welcome_message = f"{header}\n\n{welcome_section}\n\n{footer}"
         keyboard = [[InlineKeyboardButton("🛒 Accéder au Shop", callback_data="cmd_shop")]]
@@ -4649,11 +4608,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             logger.error(f"Erreur lors de l'envoi du message de bienvenu: {e}")
     elif role == "admin":
         # Admin : proposer le choix Admin (avec privilèges) ou User (sans privilèges)
-        if parrain_added_via_link:
-            try:
-                await update.message.reply_text(f"🎁 Votre parrain a été enregistré ! Vous venez de gagner {PARRAINAGE_BONUS_POINTS} points !", parse_mode="HTML")
-            except TelegramError:
-                pass
         first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "Admin"
         header = format_header_rich("BOT KFC", "🍗", "orange", banner=False)
 
@@ -4669,11 +4623,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             logger.error(f"Erreur envoi choix Admin/User: {e}")
     else:
         # Vendeur (ou autre) : menu principal
-        if parrain_added_via_link:
-            try:
-                await update.message.reply_text(f"🎁 Votre parrain a été enregistré ! Vous venez de gagner {PARRAINAGE_BONUS_POINTS} points !", parse_mode="HTML")
-            except TelegramError:
-                pass
         await show_main_menu(update, context)
 
 
@@ -4687,8 +4636,6 @@ def get_command_message(callback_data: str, user_id: int, user_first_name: Optio
         "cmd_user": ("👥 **Gestion des Utilisateurs**\n\nGérez les utilisateurs du système.", "menu"),
         "cmd_panel_vendeur": ("💼 **Panel Vendeur**\n\nBienvenue dans votre espace vendeur.", "menu"),
         "cmd_annonce": ("📢 **Annonces**\n\nConsultez les dernières annonces.", "shop"),
-        "cmd_report": ("📝 **Signaler un problème**\n\nUtilisez cette fonction pour signaler un problème.", "shop"),
-        "cmd_calc": ("🧮 **Calculatrice**\n\nFonction calculatrice à venir.", "shop"),
     }
     
     return commands.get(callback_data, ("❌ Commande non reconnue.", "menu"))
@@ -4766,9 +4713,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             context.user_data["view_as_user"] = True
             # Nettoyer les modes admin pour repartir propre en mode user
             for key in ("config_edit", "config_announcement_edit", "admin_create_account_mode",
-                        "user_info_mode", "reduction_edit_mode", "gain_parrainage_edit_mode",
-                        "vendeur_reduction_mode", "vendeur_gain_parrainage_mode", "role_add_mode",
-                        "role_remove_mode", "report_reply_mode", "storage_mode", "credit_points_mode"):
+                        "user_info_mode", "reduction_edit_mode",
+                        "vendeur_reduction_mode", "role_add_mode",
+                        "role_remove_mode", "storage_mode"):
                 context.user_data.pop(key, None)
         await show_main_menu(update, context)
         try:
@@ -4818,11 +4765,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         thread_id = get_staff_thread_demande_access()
         row = get_nouveau_user(user_id)
         nb = row[2] if row else 1
-        first_name = (user.first_name or "N/A")[:64]
-        uname_str = f"@{username}" if username else "—"
+        first_name = escape_html((user.first_name or "N/A")[:64])
+        uname_str = f"@{escape_html(username)}" if username else "—"
         staff_msg = (
-            f"🔐 **Demande d'accès au bot**\n\n"
-            f"👤 User ID: `{user_id}`\n"
+            "🔐 <b>Demande d'accès au bot</b>\n\n"
+            f"👤 User ID: <code>{user_id}</code>\n"
             f"📱 Username: {uname_str}\n"
             f"📛 Prénom: {first_name}\n"
             f"📊 Tentative n°{nb}"
@@ -4834,7 +4781,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             ]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await send_to_staff_channel(context.bot, staff_msg, thread_id=thread_id, reply_markup=reply_markup, parse_mode="Markdown")
+        await send_to_staff_channel(context.bot, staff_msg, thread_id=thread_id, reply_markup=reply_markup, parse_mode="HTML")
         try:
             await query.edit_message_text(
                 "✅ Votre demande a été envoyée. Un administrateur vous répondra sous peu.",
@@ -4894,7 +4841,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         msg = f"{header}\n\nChoisissez votre shop :"
         keyboard = [
             [InlineKeyboardButton("🛒 Click&Collect", callback_data="boutique_click_collect")],
-            [InlineKeyboardButton("📷 Carte", callback_data="boutique_carte")],
+            [InlineKeyboardButton("📷 Carte | indisponible", callback_data="boutique_carte")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_shop")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -4913,7 +4860,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     if callback_data == "boutique_carte":
-        await show_boutique_carte_menu(update, context, user_id)
+        # Carte temporairement indisponible : no-op volontaire
         return
 
     if callback_data.startswith("boutique_carte_points_"):
@@ -4944,6 +4891,24 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return []
         return list(cart) if isinstance(cart, list) else list((cart or {}).values())
 
+    def _cart_total_argent(cart_list: list) -> float:
+        """Total utilisateur (argent) calculé depuis le champ price des lignes panier."""
+        total = 0.0
+        for e in cart_list or []:
+            raw_price = e.get("price")
+            if raw_price is None:
+                raw_price = get_product_price(str(e.get("id", "")))
+            try:
+                unit_price = float(raw_price)
+            except (TypeError, ValueError):
+                unit_price = 0.0
+            try:
+                qty = int(e.get("quantity", 1))
+            except (TypeError, ValueError):
+                qty = 1
+            total += unit_price * max(1, qty)
+        return total
+
     def _render_article_page(cat_idx: int, art_idx: int):
         """Affiche l'écran article paginé (cat_idx, art_idx). Retourne (header, msg, reply_markup) ou None."""
         menu = context.user_data.get('click_collect_preview_menu', {})
@@ -4955,10 +4920,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return None
         item = items[art_idx]
         loyalty_id = str(item.get("id", ""))
+        product_data = PRODUCT.get(loyalty_id) or {}
         cart_list = _cart_lines()
         qty = sum(e.get("quantity", 1) for e in cart_list if str(e.get("id", "")) == loyalty_id)
-        cost = item.get("cost", "?")
-        total_pts = sum(e.get("cost", 0) * e.get("quantity", 1) for e in cart_list)
+        display_name = sanitize_display_name(product_data.get("name", "Produit inconnu"))
+        display_price = product_data.get("price", "-")
+        total_argent = _cart_total_argent(cart_list)
         cat_name = cat_names[cat_idx]
         panier_ref = context.user_data.get('click_collect_panier_id', '')
         header = format_header_rich(cat_name, "🍗", "orange", banner=False)
@@ -4967,20 +4934,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         #    msg += f"🔢 Réf. panier : <code>{escape_html(panier_ref)}</code>\n\n"
         msg += (
             f"——————————————————\n"
-            f"<b>{escape_html(sanitize_display_name(item.get('name', '?')))}</b>\n"
-            f"💎 {cost} pts\n\n\n\n"
+            f"<b>{escape_html(display_name)}</b>\n"
+            f"PRIX : {escape_html(str(display_price))} euro\n\n\n\n"
             f"• Dans le panier : {qty}\n"
-            f"• Total panier : {total_pts} pts\n"
+            f"• Total panier : {total_argent:.2f} argent\n"
             f"{art_idx + 1}/{len(items)}"
         )
+        if item.get("unknown_product"):
+            msg += "\n\n⚠️ Produit inconnu (API Click). Ajout au panier désactivé."
         keyboard = [
-            [
-                InlineKeyboardButton("➖", callback_data=f"click_collect_art_minus_{cat_idx}_{art_idx}"),
-                InlineKeyboardButton("➕", callback_data=f"click_collect_art_plus_{cat_idx}_{art_idx}"),
-            ],
             [
                 InlineKeyboardButton("⬅ Precedant", callback_data=f"click_collect_art_prev_{cat_idx}_{art_idx}"),
                 InlineKeyboardButton("Suivant ➡", callback_data=f"click_collect_art_next_{cat_idx}_{art_idx}"),
+            ],
+            [
+                InlineKeyboardButton("➖", callback_data=f"click_collect_art_minus_{cat_idx}_{art_idx}"),
+                InlineKeyboardButton("➕", callback_data=f"click_collect_art_plus_{cat_idx}_{art_idx}"),
             ],
             [
                 InlineKeyboardButton("Retour", callback_data="click_collect_back_cats"),
@@ -5075,6 +5044,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "id": str(item.get("id", "")),
             "name": item.get("name", "?"),
             "cost": int(item.get("cost", 0)) if item.get("cost") not in (None, "?") else 0,
+            "price": get_product_price(str(item.get("id", ""))),
             "modgrps": built_modgrps or [],
             "quantity": 1,
         }
@@ -5241,37 +5211,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await query.answer("Catégorie vide", show_alert=True)
                 return
             context.user_data['click_collect_selected_cat'] = cat_idx
-            art_idx = 0
-            item = items[art_idx]
-            loyalty_id = str(item.get("id", ""))
-            cart_list = _cart_lines()
-            qty = sum(e.get("quantity", 1) for e in cart_list if str(e.get("id", "")) == loyalty_id)
-            cost = item.get("cost", "?")
-            total_pts = sum(e.get("cost", 0) * e.get("quantity", 1) for e in cart_list)
-            header = format_header_rich(cat_name, "🍗", "orange", banner=False)
-            msg = (
-                f"——————————————————\n"
-                f"<b>{escape_html(sanitize_display_name(item.get('name', '?')))}</b>\n"
-                f"💎 {cost} pts\n\n\n\n"
-                f"• Dans le panier : {qty}\n"
-                f"• Total panier : {total_pts} pts\n"
-                f"{art_idx + 1}/{len(items)}"
-            )
-            keyboard = [
-                [
-                    InlineKeyboardButton("➖", callback_data=f"click_collect_art_minus_{cat_idx}_{art_idx}"),
-                    InlineKeyboardButton("➕", callback_data=f"click_collect_art_plus_{cat_idx}_{art_idx}"),
-                ],
-                [
-                    InlineKeyboardButton("⬅ Precedant", callback_data=f"click_collect_art_prev_{cat_idx}_{art_idx}"),
-                    InlineKeyboardButton("Suivant ➡", callback_data=f"click_collect_art_next_{cat_idx}_{art_idx}"),
-                ],
-                [
-                    InlineKeyboardButton("Retour", callback_data="click_collect_back_cats"),
-                    InlineKeyboardButton("Panier", callback_data="click_collect_panier"),
-                ],
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
+            result = _render_article_page(cat_idx, 0)
+            if not result:
+                await query.answer("Catégorie vide", show_alert=True)
+                return
+            header, msg, reply_markup = result
             await safe_edit_message_text(query, f"{header}\n\n{msg}", reply_markup, "HTML")
             try:
                 await query.answer()
@@ -5345,7 +5289,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not store or not store.get("id"):
             await query.answer("❌ Sélectionnez d'abord un KFC.", show_alert=True)
             return
-        total_pts = sum(e.get("cost", 0) * e.get("quantity", 1) for e in cart_list)
+        total_argent = _cart_total_argent(cart_list)
         header = format_header_rich("PANIER", "🛒", "orange", banner=False)
         store_name = store.get("name", "?")
         panier_ref = context.user_data.get('click_collect_panier_id', '')
@@ -5356,9 +5300,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not cart_list:
             msg += "Votre panier est vide.\n\nAjoutez des articles en parcourant les catégories."
         else:
-            msg += f"{len(cart_list)} article(s) • {total_pts} pts\n--------------------------------\n\n"
+            msg += f"{len(cart_list)} article(s) • {total_argent:.2f} argent\n--------------------------------\n\n"
             for e in cart_list[:15]:
-                msg += f"• {escape_html(sanitize_display_name(e.get('name', '?')))} x{e.get('quantity', 1)} — {e.get('cost', 0)} pts\n"
+                line_price = e.get("price", get_product_price(str(e.get("id", ""))))
+                try:
+                    line_price_float = float(line_price)
+                except (TypeError, ValueError):
+                    line_price_float = 0.0
+                msg += f"• {escape_html(sanitize_display_name(e.get('name', '?')))} x{e.get('quantity', 1)} — {line_price_float:.2f} euro\n"
             if len(cart_list) > 15:
                 msg += f"... et {len(cart_list) - 15} autre(s)"
         keyboard = []
@@ -5385,6 +5334,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if art_idx < 0 or art_idx >= len(items):
                 return
             item = items[art_idx]
+            if item.get("unknown_product"):
+                try:
+                    await query.answer(
+                        "Produit inconnu du dictionnaire PRODUCT : ajout au panier bloqué.",
+                        show_alert=True,
+                    )
+                except TelegramError:
+                    pass
+                return
             # Vérifier la limite de points du panier avant d'ajouter l'article
             cart_for_total = context.user_data.get('click_collect_cart', [])
             if not isinstance(cart_for_total, list):
@@ -5418,6 +5376,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     "id": str(item.get("id", "")),
                     "name": item.get("name", "?"),
                     "cost": int(item.get("cost", 0)) if item.get("cost") not in (None, "?") else 0,
+                    "price": get_product_price(str(item.get("id", ""))),
                     "modgrps": [],
                     "quantity": 1,
                 }
@@ -5796,18 +5755,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not store or not store.get("id"):
             await query.answer("❌ Erreur : restaurant non sélectionné.", show_alert=True)
             return
-        total_pts = sum(e.get("cost", 0) * e.get("quantity", 1) for e in cart_list)
+        total_argent = _cart_total_argent(cart_list)
         # Vérification du solde local avant confirmation définitive
         user_balance = get_user_balance(user_id)
-        if user_balance < total_pts:
-            header = format_header_rich("POINTS INSUFFISANTS", "⚠️", "orange", banner=False)
+        if user_balance < int(round(total_argent)):
+            header = format_header_rich("ARGENT INSUFFISANT", "⚠️", "orange", banner=False)
             msg = (
-                f"Votre panier contient <b>{total_pts} pts</b>, mais votre solde actuel est de "
-                f"<b>{user_balance} pts</b>.\n\n"
-                "Rechargez votre solde en achetant une carte, ou réduisez le contenu du panier."
+                f"Votre panier contient <b>{total_argent:.2f} euro</b>, mais votre solde actuel est de "
+                f"<b>{user_balance} argent</b>.\n\n"
+                "Rechargez votre solde en achetant de l'argent, ou réduisez le contenu du panier."
             )
             keyboard = [
-                [InlineKeyboardButton("📷 Acheter des points (Carte)", callback_data="boutique_carte")],
+                [InlineKeyboardButton("💰 Acheter de l'argent", callback_data="cmd_acheter_points")],
                 [InlineKeyboardButton("🔙 Retour au panier", callback_data="click_collect_panier")],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -5817,12 +5776,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             except TelegramError:
                 pass
             return
-        cart_preview = "\n".join(f"• {escape_html(sanitize_display_name(e.get('name', '?')))} x{e.get('quantity', 1)} ({e.get('cost', 0)} pts)" for e in cart_list[:10])
+        cart_preview_lines = []
+        for e in cart_list[:10]:
+            raw_price = e.get("price", get_product_price(str(e.get("id", ""))))
+            try:
+                item_price = float(raw_price)
+            except (TypeError, ValueError):
+                item_price = 0.0
+            cart_preview_lines.append(
+                f"• {escape_html(sanitize_display_name(e.get('name', '?')))} x{e.get('quantity', 1)} ({item_price:.2f} euro)"
+            )
+        cart_preview = "\n".join(cart_preview_lines)
         if len(cart_list) > 10:
             cart_preview += f"\n... et {len(cart_list) - 10} autre(s)"
         header = format_header_rich("CHOIX DÉFINITIF ?", "⚠️", "orange", banner=False)
         msg = (
-            f"<b>Votre panier ({len(cart_list)} article(s), {total_pts} pts) :</b>\n{cart_preview}\n\n"
+            f"<b>Votre panier ({len(cart_list)} article(s), {total_argent:.2f} euro) :</b>\n{cart_preview}\n\n"
             "Êtes-vous sûr ? Le choix est définitif."
         )
         keyboard = [
@@ -5909,35 +5878,55 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             except TelegramError:
                 pass
             return
-        # Débit local du solde utilisateur (points consommés par le panier)
+        # Débit local du solde utilisateur (argent consommé par le panier)
         try:
             cart = context.user_data.get('click_collect_cart', [])
             cart_list = cart if isinstance(cart, list) else list((cart or {}).values())
-            total_pts = sum(e.get("cost", 0) * e.get("quantity", 1) for e in cart_list)
-            if total_pts > 0:
-                ok_debit = update_user_balance(user_id, -total_pts, allow_negative_until=0)
+            total_argent = _cart_total_argent(cart_list)
+            if total_argent > 0:
+                debit_amount = int(round(total_argent))
+                ok_debit = update_user_points(user_id, -debit_amount)
                 if not ok_debit:
                     logger.warning(
-                        f"Échec du débit local de {total_pts} pts pour l'utilisateur {user_id} "
+                        f"Échec du débit local de {debit_amount} argent pour l'utilisateur {user_id} "
                         f"après submit Click&Collect (panier_id={panier_id})"
                     )
         except Exception as e:
             logger.error(
-                f"Exception lors du débit local des points pour l'utilisateur {user_id} "
+                f"Exception lors du débit local de l'argent pour l'utilisateur {user_id} "
                 f"après submit Click&Collect (panier_id={panier_id}): {e}"
             )
         conf_url = (data_submit or {}).get("confirmation_url") if data_submit else None
         first_name = (data_submit or {}).get("first_name") if data_submit else None
+        last_name = (data_submit or {}).get("last_name") if data_submit else None
+        order_number = (data_submit or {}).get("order_number") if data_submit else None
+        phone_number = (data_submit or {}).get("phone_number") if data_submit else None
+        selected_store = context.user_data.get("click_collect_selected_store") or {}
+        store_name = (data_submit or {}).get("store_name") if data_submit else None
+        store_city = (data_submit or {}).get("store_city") if data_submit else None
+        if not store_name:
+            store_name = selected_store.get("name")
+        if not store_city:
+            store_city = selected_store.get("city")
         first_name_display = escape_html(str(first_name)) if first_name else "—"
+        last_name_display = escape_html(str(last_name)) if last_name else "—"
+        order_number_display = escape_html(str(order_number)) if order_number else "—"
+        phone_masked = escape_html(mask_phone_for_click_display(phone_number))
+        store_name_display = escape_html(str(store_name)) if store_name else "—"
+        store_city_display = escape_html(str(store_city)) if store_city else "—"
         context.user_data["click_collect_last_submit_info"] = data_submit
-        header = format_header_rich("COMMANDE SOUMISE", "✅", "success", banner=False)
+        header = format_header_rich("COMMANDE TERMINÉE", "✅", "success", banner=False)
         msg = (
-            f"Votre commande a été soumise avec succès.\n\n"
-            f"👤 Prénom : {first_name_display}\n\n"
-            f"🔗 Lien de confirmation :\n{escape_html(conf_url or '—')}"
+            f"\n"
+            f" N° commande : {order_number_display}\n"
+            f"👤 Nom : {first_name_display} {last_name_display}\n"
+            f"📱 Téléphone : {phone_masked}\n\n"
+            f"🍗 KFC : {store_name_display}\n"
+            f"📍 Ville : {store_city_display}\n\n"
+            f"🔗 Commande :\n{escape_html(conf_url or '—')}"
         )
         keyboard = [
-            [InlineKeyboardButton("⏱ 3min", callback_data="click_collect_3min")],
+            [InlineKeyboardButton("⏱ Lancer la préparation (3min)", callback_data="click_collect_3min")],
             [InlineKeyboardButton("🏠 Accueil", callback_data="cmd_shop")],
         ]
         if role == "admin":
@@ -5985,21 +5974,36 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         info = context.user_data.get("click_collect_last_submit_info") or {}
         conf_url = info.get("confirmation_url")
         first_name = info.get("first_name")
+        last_name = info.get("last_name")
+        order_number = info.get("order_number")
+        phone_number = info.get("phone_number")
+        selected_store = context.user_data.get("click_collect_selected_store") or {}
+        store_name = info.get("store_name") or selected_store.get("name")
+        store_city = info.get("store_city") or selected_store.get("city")
         first_name_display = escape_html(str(first_name)) if first_name else "—"
-        header = format_header_rich("COMMANDE SOUMISE", "✅", "success", banner=False)
+        last_name_display = escape_html(str(last_name)) if last_name else "—"
+        order_number_display = escape_html(str(order_number)) if order_number else "—"
+        phone_masked = escape_html(mask_phone_for_click_display(phone_number))
+        store_name_display = escape_html(str(store_name)) if store_name else "—"
+        store_city_display = escape_html(str(store_city)) if store_city else "—"
+        header = format_header_rich("COMMANDE TERMINÉE", "✅", "success", banner=False)
         msg = (
-            f"Votre commande a été soumise avec succès.\n\n"
-            f"👤 Prénom : {first_name_display}\n\n"
-            f"🔗 Lien de confirmation :\n{escape_html(conf_url or '—')}"
+            f"\n"
+            f" N° commande : {order_number_display}\n"
+            f"👤 Nom : {first_name_display} {last_name_display}\n"
+            f"📱 Téléphone : {phone_masked}\n\n"
+            f"🍗 KFC : {store_name_display}\n"
+            f"📍 Ville : {store_city_display}\n\n"
+            f"🔗 commande :\n{escape_html(conf_url or '—')}"
         )
         keyboard = [
-            [InlineKeyboardButton("⏱ 3min", callback_data="click_collect_3min")],
+            [InlineKeyboardButton("⏱ Lancer la préparation (3min)", callback_data="click_collect_3min")],
             [InlineKeyboardButton("📋 Voir toutes les infos", callback_data="click_collect_show_submit_info")],
             [InlineKeyboardButton("🏠 Accueil", callback_data="cmd_shop")],
         ]
         if role != "admin":
             keyboard = [
-                [InlineKeyboardButton("⏱ 3min", callback_data="click_collect_3min")],
+                [InlineKeyboardButton("⏱ Lancer la préparation (3min)", callback_data="click_collect_3min")],
                 [InlineKeyboardButton("🏠 Accueil", callback_data="cmd_shop")],
             ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -6045,88 +6049,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             await query.answer("❌ Échec du check-in", show_alert=True)
         return
 
-    # Gestion de "Ignorer" un report
-    if callback_data.startswith("report_ignore_") and role == "admin":
-        try:
-            report_id = callback_data.split("_", 2)[2]
-            report_info = context.bot_data.get(f'report_info_{report_id}')
-            
-            if report_info:
-                report_type = report_info.get('report_type', '📝 Report')
-                
-                # Modifier le message pour indiquer qu'il a été ignoré
-                ignored_message = (
-                    f"⏭️ **REPORT IGNORÉ**\n\n"
-                    f"{report_type}\n\n"
-                    f"👤 **Utilisateur:**\n"
-                    f"🆔 ID: `{report_info.get('user_id')}`\n"
-                    f"👤 Nom: {report_info.get('first_name', 'N/A')}\n"
-                    f"📱 Username: @{report_info.get('username', 'N/A')}\n\n"
-                    f"📝 **Message:**\n{escape_markdown(sanitize_text(report_info.get('report_text', ''), 4096))}"
-                )
-                
-                try:
-                    await query.message.edit_text(
-                        ignored_message,
-                        parse_mode="Markdown"
-                    )
-                    logger.info(f"Report {report_id} ignoré par l'admin {user_id}")
-                except TelegramError as e:
-                    logger.error(f"Erreur lors de la modification du message ignoré: {e}")
-            else:
-                pass
-        except (ValueError, IndexError) as e:
-            logger.error(f"Erreur lors de l'ignorance du report: {e}")
-        return
-    
-    # Gestion de "Répondre" à un report
-    if callback_data.startswith("report_reply_") and role == "admin":
-        try:
-            report_id = callback_data.split("_", 2)[2]
-            report_info = context.bot_data.get(f'report_info_{report_id}')
-            
-            if report_info:
-                # Activer le mode réponse
-                context.user_data['report_reply_mode'] = True
-                context.user_data['report_reply_id'] = report_id
-                
-                report_type = escape_html(report_info.get('report_type', '📝 Report'))
-                first_name = escape_html(report_info.get('first_name', 'N/A'))
-                username = escape_html(report_info.get('username', 'N/A'))
-                
-                header = format_header_rich("RÉPONDRE AU REPORT", "💬", "info", banner=False)
-                
-                info_section = format_section_rich(
-                    "Informations",
-                    "",
-                    "ℹ️",
-                    "info"
-                )
-                info_content = (
-                    f"{format_info_card('Type', report_type, '📋')}\n"
-                    f"{format_info_card('Utilisateur', f'{first_name} (@{username})', '👤')}"
-                )
-                
-                message = f"{header}\n\n{info_section}\n{info_content}\n\n📝 Écrivez votre réponse ci-dessous :"
-                
-                keyboard = [[InlineKeyboardButton("❌ Annuler", callback_data=f"report_ignore_{report_id}")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                
-                try:
-                    await query.message.reply_text(message, reply_markup=reply_markup, parse_mode="HTML")
-                    logger.info(f"Mode réponse activé pour le report {report_id} par l'admin {user_id}")
-                except TelegramError as e:
-                    logger.error(f"Erreur lors de l'affichage du message de réponse: {e}")
-            else:
-                pass
-        except (ValueError, IndexError) as e:
-            logger.error(f"Erreur lors de l'activation de la réponse: {e}")
-        return
-    
     # Gestion de "Moi" - affichage du profil avec soldes et bannière
     if callback_data == "cmd_moi":
         points = get_user_points(user_id)
-        argent = get_user_argent(user_id)
         first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "N/A"
         username = escape_html(user.username or 'N/A')
         
@@ -6141,18 +6066,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             f"{format_info_card('Username', f'@{username}', '📱')}"
         )
         
-        # Soldes mis en évidence (points + argent)
+        # Solde mis en évidence
         solde_box = format_highlight_box(f"{points} points", "💎", "gold")
-        argent_box = format_highlight_box(f"{argent} argent", "💰", "green")
-        
-        message = f"{header}\n\n{info_section}\n{info_content}\n\n{solde_box}\n{argent_box}"
-        keyboard = [
-            [InlineKeyboardButton("🎁 Parrainage", callback_data="cmd_parrainage")],
-            [InlineKeyboardButton("🔄 Convertir mon argent en points", callback_data="parrainage_convertir")],
-        ]
-        # Bouton d'emprunt de points (admin + vendeur uniquement)
-        if role in ("admin", "vendeur"):
-            keyboard.append([InlineKeyboardButton("💳 Emprunter des points", callback_data="credit_points")])
+
+        message = f"{header}\n\n{info_section}\n{info_content}\n\n{solde_box}"
+        keyboard = []
         keyboard += [
             [InlineKeyboardButton("📜 Historique", callback_data="cmd_historique")],
             [InlineKeyboardButton("🔙 Retour au shop", callback_data="cmd_shop")],
@@ -6173,275 +6091,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.error(f"Erreur lors de l'affichage du profil: {e}")
         return
 
-    if callback_data == "credit_points":
-        if role not in ("admin", "vendeur"):
-            try:
-                await query.answer()
-            except TelegramError:
-                pass
-            return
-        points = get_user_points(user_id)
-        argent = get_user_argent(user_id)
-        max_dec = get_max_decouvert_argent()
-        header = format_header_rich("EMPRUNTER DES POINTS", "💳", "orange", banner=False)
-        max_emprunt = argent + max_dec
-        msg = (
-            "Vous pouvez <b>emprunter des points</b> en échange de votre solde <b>argent</b>.\n\n"
-            "Principe :\n"
-            "• On enlève le montant emprunté de votre <b>argent</b> (l'argent peut devenir négatif).\n"
-            f"• Découvert autorisé sur l'argent : <b>-{max_dec}</b>.\n\n"
-            f"Points actuels : <b>{points}</b>\n"
-            f"Argent actuel : <b>{argent}</b> → emprunt max : <b>{max_emprunt}</b>\n\n"
-            "Entrez dans le chat le <b>nombre de points</b> que vous voulez emprunter (entier positif)."
-        )
-        keyboard = [[InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        context.user_data["credit_points_mode"] = True
-        await safe_edit_message_text(query, f"{header}\n\n{msg}", reply_markup, "HTML")
-        try:
-            await query.answer()
-        except TelegramError:
-            pass
-        return
-    # Gestion de "Parrainage" (profil) — menu principal avec 2 options
-    if callback_data == "cmd_parrainage":
-        header = format_header_rich("PARRAINAGE", "🎁", "purple", banner=False)
-        msg = f"{header}\n\nChoisissez une option :"
-        keyboard = [
-            [InlineKeyboardButton("👤 Mon parrain", callback_data="parrainage_mon_parrain")],
-            [InlineKeyboardButton("👥 Mes filleuls", callback_data="parrainage_mes_filleuls")],
-            [InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage parrainage: {e}")
-        return
-
-    # Mon parrain — affichage parrain actuel, ajouter, lien
-    if callback_data == "parrainage_mon_parrain":
-        token_parrain = get_user_token_parrainage(user_id)
-        token_pub = derive_public_token(user_id)
-        try:
-            bot_info = await context.bot.get_me()
-            bot_username = bot_info.username if bot_info else None
-        except Exception:
-            bot_username = None
-        
-        header = format_header_rich("MON PARRAIN", "👤", "purple", banner=False)
-        if token_parrain:
-            parrain_at = get_parrain_username(user_id)
-            parrain_line = f"\n\n👤 Parrain : {escape_html(parrain_at)}" if parrain_at else ""
-            msg = f"{header}\n\n✅ <b>Vous êtes parrainé !</b>\n{parrain_line}"
-            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_parrainage")]]
-        else:
-            msg = f"{header}\n\n📝 <b>Aucun parrain</b>\n\nVous n'avez pas encore de parrain associé."
-            keyboard = [
-                [InlineKeyboardButton("➕ Ajouter un parrain", callback_data="parrainage_add")],
-                [InlineKeyboardButton("🔙 Retour", callback_data="cmd_parrainage")]
-            ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage mon parrain: {e}")
-        return
-
-    # Mes filleuls — nombre + bouton obtenir lien
-    if callback_data == "parrainage_mes_filleuls":
-        count = get_filleuls_count(user_id)
-        header = format_header_rich("MES FILLEULS", "👥", "purple", banner=False)
-        msg = f"{header}\n\n👥 <b>Nombre de filleuls :</b> {count}\n\nPartagez votre lien d'invitation pour parrainer de nouveaux utilisateurs."
-        keyboard = [
-            [InlineKeyboardButton("🔗 Obtenir mon lien de parrainage", callback_data="parrainage_obtenir_lien")],
-            [InlineKeyboardButton("🔙 Retour", callback_data="cmd_parrainage")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage mes filleuls: {e}")
-        return
-
-    # Obtenir mon lien de parrainage
-    if callback_data == "parrainage_obtenir_lien":
-        token_pub = derive_public_token(user_id)
-        try:
-            bot_info = await context.bot.get_me()
-            bot_username = bot_info.username if bot_info else None
-        except Exception:
-            bot_username = None
-        inv_link = f"https://t.me/{bot_username}?start=ref_{token_pub}" if bot_username else ""
-        header = format_header_rich("LIEN DE PARRAINAGE", "🔗", "purple", banner=False)
-        msg = f"{header}\n\n🔗 <b>Votre lien d'invitation :</b>\n\n<code>{escape_html(inv_link)}</code>\n\nPartagez ce lien pour parrainer de nouveaux utilisateurs."
-        keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="parrainage_mes_filleuls")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage lien parrainage: {e}")
-        return
-
-    # Convertir argent -> points — écran principal avec 2 boutons
-    if callback_data == "parrainage_convertir":
-        argent = get_user_argent(user_id)
-        header = format_header_rich("CONVERTIR MON ARGENT", "🔄", "purple", banner=False)
-        msg = f"{header}\n\n💰 <b>Votre argent disponible :</b> {argent}\n\nChoisissez le type de conversion :"
-        point_ok = argent > 0
-        argent_ok = argent >= PARRAINAGE_MIN_FOR_ARGENT
-        btn_point = "💎 POINTS | disponible !" if point_ok else "💎 POINTS | indisponible"
-        btn_argent = "💰 RETRAIT ARGENT | disponible !" if argent_ok else "💰 RETRAIT ARGENT | indisponible"
-        keyboard = [
-            [InlineKeyboardButton(btn_point, callback_data="parrainage_convertir_point" if point_ok else "parrainage_convertir_noop")],
-            [InlineKeyboardButton(btn_argent, callback_data="parrainage_convertir_argent" if argent_ok else "parrainage_convertir_noop")],
-            [InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage conversion parrainage: {e}")
-        return
-
-    # Clic sur POINT/ARGENT indisponible — ne rien faire
-    if callback_data == "parrainage_convertir_noop":
-        return
-
-    # Clic sur POINT disponible — demande le montant (argent -> points, sans découvert)
-    if callback_data == "parrainage_convertir_point":
-        argent = get_user_argent(user_id)
-        if argent <= 0:
-            return
-        context.user_data[f"waiting_parrainage_convert_amount_{user_id}"] = True
-        header = format_header_rich("CONVERTIR EN POINTS", "💎", "purple", banner=False)
-        msg = (
-            f"{header}\n\n"
-            f"💰 Argent disponible : <b>{argent}</b>\n\n"
-            "📝 Entrez le nombre de points à convertir (entier positif)."
-        )
-        keyboard = [[InlineKeyboardButton("❌ Annuler", callback_data="parrainage_convertir_cancel")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage conversion point: {e}")
-        return
-
-    # Clic sur ARGENT disponible — inactif pour l'instant
-    if callback_data == "parrainage_convertir_argent":
-        return
-
-    # Annuler la conversion
-    if callback_data == "parrainage_convertir_cancel":
-        context.user_data.pop(f"waiting_parrainage_convert_amount_{user_id}", None)
-        context.user_data.pop(f"parrainage_convert_amount_{user_id}", None)
-        # Retour à l'écran conversion
-        argent = get_user_argent(user_id)
-        header = format_header_rich("CONVERTIR MON ARGENT", "🔄", "purple", banner=False)
-        msg = f"{header}\n\n💰 <b>Votre argent disponible :</b> {argent}\n\nChoisissez le type de conversion :"
-        point_ok = argent > 0
-        argent_ok = argent >= PARRAINAGE_MIN_FOR_ARGENT
-        btn_point = "💎 POINTS | disponible !" if point_ok else "💎 POINTS | indisponible"
-        btn_argent = "💰 RETRAIT ARGENT | disponible !" if argent_ok else "💰 RETRAIT ARGENT | indisponible"
-        keyboard = [
-            [InlineKeyboardButton(btn_point, callback_data="parrainage_convertir_point" if point_ok else "parrainage_convertir_noop")],
-            [InlineKeyboardButton(btn_argent, callback_data="parrainage_convertir_argent" if argent_ok else "parrainage_convertir_noop")],
-            [InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur retour conversion: {e}")
-        return
-
-    # Confirmation de conversion (argent -> points, sans découvert)
-    if callback_data == "parrainage_convertir_confirm":
-        amount = context.user_data.pop(f"parrainage_convert_amount_{user_id}", None)
-        context.user_data.pop(f"waiting_parrainage_convert_amount_{user_id}", None)
-        if amount is None or amount <= 0:
-            return
-        # On applique la conversion stricte : argent ne peut pas devenir négatif
-        if convert_argent_to_points(user_id, amount):
-            new_points = get_user_points(user_id)
-            new_argent = get_user_argent(user_id)
-            header = format_header_rich("CONVERSION RÉUSSIE", "✅", "success", banner=False)
-            msg = (
-                f"{header}\n\n"
-                f"✅ <b>{amount} points</b> ont été ajoutés à vos points.\n\n"
-                f"💎 Points actuels : <b>{new_points}</b>\n"
-                f"💰 Argent restant : <b>{new_argent}</b>"
-            )
-            keyboard = [[InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            try:
-                await safe_edit_message_text(query, msg, reply_markup, "HTML")
-            except TelegramError as e:
-                logger.error(f"Erreur affichage succès conversion: {e}")
-        else:
-            pass
-        return
-
-    # Clic sur "Ajouter un parrain" — demande de saisir le code
-    if callback_data == "parrainage_add":
-        token_parrain = get_user_token_parrainage(user_id)
-        if token_parrain:
-            return
-        context.user_data[f"waiting_parrainage_code_{user_id}"] = True
-        header = format_header_rich("AJOUTER UN PARRAIN", "🎁", "orange", banner=False)
-        msg = (
-            f"{header}\n\n"
-            "📝 <b>Entrez le code parrain</b>\n\n"
-            "Demandez votre code de parrain à la personne qui vous a invité.\n"
-            "Le code est un identifiant unique à 10 caractères."
-        )
-        keyboard = [[InlineKeyboardButton("❌ Annuler", callback_data="parrainage_cancel")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur affichage ajout parrain: {e}")
-        return
-
-    # Annuler l'ajout de parrain — retour à Mon parrain
-    if callback_data == "parrainage_cancel":
-        context.user_data.pop(f"waiting_parrainage_code_{user_id}", None)
-        token_parrain = get_user_token_parrainage(user_id)
-        token_pub = derive_public_token(user_id)
-        try:
-            bot_info = await context.bot.get_me()
-            bot_username = bot_info.username if bot_info else None
-        except Exception:
-            bot_username = None
-        inv_link = f"https://t.me/{bot_username}?start=ref_{token_pub}" if bot_username else ""
-        link_section = f"\n\n🔗 <b>Votre lien d'invitation :</b>\n<code>{escape_html(inv_link)}</code>\n\nPartagez ce lien pour parrainer de nouveaux utilisateurs." if inv_link else ""
-        header = format_header_rich("MON PARRAIN", "👤", "purple", banner=False)
-        if token_parrain:
-            parrain_at = get_parrain_username(user_id)
-            parrain_line = f"\n\n👤 Parrain : {escape_html(parrain_at)}" if parrain_at else ""
-            msg = f"{header}\n\n✅ <b>Vous êtes parrainé !</b>\n\nVotre parrain est déjà enregistré.{parrain_line}{link_section}"
-            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_parrainage")]]
-        else:
-            msg = f"{header}\n\n📝 <b>Aucun parrain</b>\n\nVous n'avez pas encore de parrain associé.{link_section}"
-            keyboard = [
-                [InlineKeyboardButton("➕ Ajouter un parrain", callback_data="parrainage_add")],
-                [InlineKeyboardButton("🔙 Retour", callback_data="cmd_parrainage")]
-            ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await safe_edit_message_text(query, msg, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur retour après annul parrain: {e}")
-        return
-
     # Gestion de "Historique" (profil) — choix entre points ou cartes
     if callback_data == "cmd_historique":
         header = format_header_rich("HISTORIQUE", "📜", "purple", banner=False)
         msg = f"{header}\n\nChoisissez le type d'historique à consulter."
         keyboard = [
-            [InlineKeyboardButton("💰 Historique points", callback_data="hist_points")],
+            [InlineKeyboardButton("💰 Historique argent", callback_data="hist_points")],
             [InlineKeyboardButton("🎴 Historique cartes", callback_data="hist_cartes")],
+            [InlineKeyboardButton("🛒 Historique Click&Collect", callback_data="hist_click")],
             [InlineKeyboardButton("🔙 Retour au profil", callback_data="cmd_moi")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -6457,13 +6114,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data["hist_points_page"] = 0
         total = get_user_payment_history_count(user_id)
         rows = get_user_payment_history(user_id, limit=PAGE_SIZE, offset=0)
-        header = format_header_rich("HISTORIQUE POINTS", "💰", "purple", banner=False)
+        header = format_header_rich("HISTORIQUE ARGENT", "💰", "purple", banner=False)
         count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
         if not rows:
-            msg = f"{header}\n\nAucun achat de points enregistré."
+            msg = f"{header}\n\nAucun achat d'argent enregistré."
             keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
         else:
-            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail (date, points, prix)."
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail (date, argent, prix)."
             keyboard = _build_hist_points_keyboard(rows, user_id, page=0, page_size=PAGE_SIZE)
         reply_markup = InlineKeyboardMarkup(keyboard)
         try:
@@ -6482,7 +6139,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         offset = page * PAGE_SIZE
         total = get_user_payment_history_count(user_id)
         rows = get_user_payment_history(user_id, limit=PAGE_SIZE, offset=offset)
-        header = format_header_rich("HISTORIQUE POINTS", "💰", "purple", banner=False)
+        header = format_header_rich("HISTORIQUE ARGENT", "💰", "purple", banner=False)
         count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
         if not rows:
             msg = f"{header}{count_line}\nAucune commande sur cette page."
@@ -6515,11 +6172,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             date_exact = str(created_at)
         price_str = f"{price:.2f}€" if price is not None else "—"
         page = context.user_data.get("hist_points_page", 0)
-        header = format_header_rich("DÉTAIL COMMANDE POINTS", "💰", "purple", banner=False)
+        header = format_header_rich("DÉTAIL COMMANDE ARGENT", "💰", "purple", banner=False)
         detail_msg = (
             f"{header}\n\n"
             f"📅 <b>Date :</b> {escape_html(str(date_exact))}\n"
-            f"💎 <b>Points :</b> {points}\n"
+            f"💎 <b>Argent :</b> {points}\n"
             f"💳 <b>Prix :</b> {price_str}"
         )
         keyboard = [[InlineKeyboardButton("🔙 Retour à la liste", callback_data=f"hist_points_page_{page}")]]
@@ -6611,6 +6268,142 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.error(f"Erreur affichage détail historique cartes: {e}")
         return
 
+    # ——— Historique CLICK&COLLECT (submit ou +) ———
+    if callback_data == "hist_click":
+        PAGE_SIZE = 5
+        context.user_data["hist_click_page"] = 0
+        total = get_user_click_history_count(user_id)
+        rows = get_user_click_history(user_id, limit=PAGE_SIZE, offset=0)
+        header = format_header_rich("HISTORIQUE CLICK&COLLECT", "🛒", "purple", banner=False)
+        count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
+        if not rows:
+            msg = f"{header}\n\nAucune commande Click&Collect soumise."
+            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
+        else:
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail (restaurant, statut, total)."
+            keyboard = _build_hist_click_keyboard(rows, user_id, page=0, page_size=PAGE_SIZE)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage historique click: {e}")
+        return
+
+    if callback_data.startswith("hist_click_page_"):
+        try:
+            page = int(callback_data.replace("hist_click_page_", "", 1))
+        except (ValueError, IndexError):
+            return
+        PAGE_SIZE = 5
+        context.user_data["hist_click_page"] = page
+        offset = page * PAGE_SIZE
+        total = get_user_click_history_count(user_id)
+        rows = get_user_click_history(user_id, limit=PAGE_SIZE, offset=offset)
+        header = format_header_rich("HISTORIQUE CLICK&COLLECT", "🛒", "purple", banner=False)
+        count_line = f"\n📋 <b>{total}</b> commande(s) au total.\n" if total else "\n"
+        if not rows:
+            msg = f"{header}{count_line}\nAucune commande sur cette page."
+            keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_historique")]]
+        else:
+            msg = f"{header}{count_line}\nSélectionnez une commande pour voir le détail."
+            keyboard = _build_hist_click_keyboard(rows, user_id, page=page, page_size=PAGE_SIZE)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage historique click page: {e}")
+        return
+
+    if callback_data.startswith("hist_click_detail_"):
+        try:
+            record_id = int(callback_data.replace("hist_click_detail_", "", 1))
+        except (ValueError, IndexError):
+            return
+        row = get_click_history_by_id(record_id)
+        if not row:
+            return
+        (
+            _id,
+            row_user_id,
+            panier_id,
+            order_uuid,
+            order_number,
+            confirmation_url,
+            status,
+            store_id,
+            store_name,
+            store_city,
+            account_id,
+            telegram_user,
+            email,
+            phone_number,
+            last_name,
+            first_name,
+            date_of_birth,
+            total_points,
+            submitted_at,
+        ) = row
+        if row_user_id != user_id and role != "admin":
+            return
+        try:
+            if hasattr(submitted_at, "strftime"):
+                date_exact = submitted_at.strftime("%d/%m/%Y à %H:%M")
+            else:
+                date_exact = str(submitted_at)[:16].replace("T", " ")
+        except Exception:
+            date_exact = str(submitted_at)
+
+        items = get_click_history_items(record_id)
+        items_lines = []
+        for name, cost, qty, line_total in items[:12]:
+            items_lines.append(
+                f"• {escape_html(sanitize_display_name(str(name or 'Article')))} x{qty} ({line_total} pts)"
+            )
+        if len(items) > 12:
+            items_lines.append(f"... et {len(items) - 12} autre(s)")
+        items_txt = "\n".join(items_lines) if items_lines else "—"
+
+        status_txt = escape_html(str(status or "N/A"))
+        store_txt = escape_html(str(store_name or "KFC"))
+        city_txt = escape_html(str(store_city or "N/A"))
+        order_txt = escape_html(str(order_number or "N/A"))
+        first_name_txt = escape_html(str(first_name or "N/A"))
+        last_name_txt = escape_html(str(last_name or "N/A"))
+        page = context.user_data.get("hist_click_page", 0)
+        header = format_header_rich("DÉTAIL COMMANDE CLICK&COLLECT", "🛒", "purple", banner=False)
+        detail_msg = (
+            f"{header}\n\n"
+            f"📅 <b>Date :</b> {escape_html(str(date_exact))}\n"
+            f"🆔 <b>Commande :</b> <code>{order_txt}</code>\n"
+            f"👤 <b>Client :</b> {first_name_txt} {last_name_txt}\n"
+            f"📌 <b>Statut :</b> {status_txt}\n"
+            f"🍗 <b>KFC :</b> {store_txt} ({city_txt})\n"
+            f"💎 <b>Total :</b> {total_points} pts\n"
+            f"🔗 <b>Lien :</b> {escape_html(str(confirmation_url or 'N/A'))}\n\n"
+            f"<b>Articles :</b>\n{items_txt}"
+        )
+        if role == "admin":
+            detail_msg += (
+                f"\n\n<b>Infos admin :</b>\n"
+                f"👤 User ID : <code>{row_user_id}</code>\n"
+                f"🧾 Order UUID : <code>{escape_html(str(order_uuid or 'N/A'))}</code>\n"
+                f"🏬 Store ID : <code>{escape_html(str(store_id or 'N/A'))}</code>\n"
+                f"🔐 Account ID : <code>{escape_html(str(account_id or 'N/A'))}</code>\n"
+                f"📱 Telegram user : {escape_html(str(telegram_user or 'N/A'))}\n"
+                f"📧 Email : <code>{escape_html(str(email or 'N/A'))}</code>\n"
+                f"☎️ Téléphone : {escape_html(str(phone_number or 'N/A'))}\n"
+                f"🧍 Nom : {escape_html(str(last_name or 'N/A'))}\n"
+                f"🧍 Prénom : {escape_html(str(first_name or 'N/A'))}\n"
+                f"🎂 Naissance : {escape_html(str(date_of_birth or 'N/A'))}"
+            )
+        keyboard = [[InlineKeyboardButton("🔙 Retour à la liste", callback_data=f"hist_click_page_{page}")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        try:
+            await safe_edit_message_text(query, detail_msg, reply_markup, "HTML")
+        except TelegramError as e:
+            logger.error(f"Erreur affichage détail historique click: {e}")
+        return
+
     # Infos complètes carte (admin) — récup depuis kfc_storage
     if callback_data.startswith("card_info_full_"):
         try:
@@ -6685,99 +6478,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.error(f"Erreur retour vue courte carte: {e}")
         return
 
-    # Gestion de "Report" - affichage du menu de sélection du type de report
-    if callback_data == "cmd_report":
-        # Nettoyer les états précédents
-        context.user_data.pop(f'waiting_report_{user_id}', None)
-        context.user_data.pop(f'report_type_{user_id}', None)
-        
-        header = format_header_rich("SIGNALER UN PROBLÈME", "📝", "warning", banner=False)
-        intro_section = format_section_rich(
-            "Sélectionnez le type de report",
-            "",
-            "✨",
-            "warning",
-            highlight=False
-        )
-        message = f"{header}\n\n{intro_section}\n"
-        
-        keyboard = [
-            [InlineKeyboardButton("🛒 Problème d'achat", callback_data="report_type_achat")],
-            [InlineKeyboardButton("🤖 Problème avec le bot", callback_data="report_type_bot")],
-            [InlineKeyboardButton("❓ Question autre", callback_data="report_type_autre")],
-            [InlineKeyboardButton("🔙 Retour", callback_data="cmd_shop")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        try:
-            await safe_edit_message_text(query, message, reply_markup, "HTML")
-            logger.info(f"Menu report affiché pour l'utilisateur {user_id}")
-        except TelegramError as e:
-            logger.error(f"Erreur lors de l'affichage du menu report: {e}")
-        return
-    
-    # Gestion du sous-menu "Problème d'achat"
-    if callback_data == "report_type_achat":
-        header = format_header_rich("PROBLÈME D'ACHAT", "🛒", "warning", banner=False)
-        intro_section = format_section_rich(
-            "Sélectionnez le type d'achat concerné",
-            "",
-            "✨",
-            "warning",
-            highlight=False
-        )
-        message = f"{header}\n\n{intro_section}\n"
-        keyboard = [
-            [InlineKeyboardButton("💰 Achat de points", callback_data="report_type_achat_points")],
-            [InlineKeyboardButton("🎴 Achat de carte", callback_data="report_type_achat_carte")],
-            [InlineKeyboardButton("🔙 Retour", callback_data="cmd_report")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        try:
-            await safe_edit_message_text(query, message, reply_markup, "HTML")
-        except TelegramError as e:
-            logger.error(f"Erreur lors de l'affichage du sous-menu achat: {e}")
-        return
-    
-    # Gestion de la sélection du type de report (points, carte, bot, autre)
-    if callback_data in {"report_type_achat_points", "report_type_achat_carte", "report_type_bot", "report_type_autre"}:
-        # Définir les titres des types de reports
-        report_titles = {
-            "report_type_achat_points": "🛒 Problème d'achat de points",
-            "report_type_achat_carte": "🛒 Problème d'achat de carte",
-            "report_type_bot": "🤖 Problème avec le bot",
-            "report_type_autre": "❓ Question autre"
-        }
-        
-        report_title = report_titles[callback_data]
-        
-        # Stocker le type de report
-        context.user_data[f'report_type_{user_id}'] = report_title
-        # Activer le mode attente de report
-        context.user_data[f'waiting_report_{user_id}'] = True
-        
-        # Extraire l'emoji et le titre
-        emoji_map = {
-            "🛒 Problème d'achat de points": ("💰", "warning"),
-            "🛒 Problème d'achat de carte": ("🎴", "warning"),
-            "🤖 Problème avec le bot": ("🤖", "danger"),
-            "❓ Question autre": ("❓", "info")
-        }
-        emoji, theme = emoji_map.get(report_title, ("📝", "info"))
-        
-        header = format_header_rich(report_title.replace("🛒 ", "").replace("🤖 ", "").replace("❓ ", ""), emoji, theme, banner=False)
-        message = f"{header}\n\n📝 Écrivez votre report :"
-        keyboard = [[InlineKeyboardButton("🔙 Retour", callback_data="cmd_report")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        try:
-            await safe_edit_message_text(query, message, reply_markup, "HTML")
-            logger.info(f"Mode report activé pour l'utilisateur {user_id} (type: {report_title}), flag waiting_report_{user_id} = {context.user_data.get(f'waiting_report_{user_id}')}")
-        except TelegramError as e:
-            logger.error(f"Erreur lors de l'affichage du message report: {e}")
-        return
-    
     # Gestion de /config pour l'admin
     if callback_data == "cmd_config" and role == "admin":
         message = "⚙️ **Configuration Admin**\n\nSélectionnez une option :"
@@ -6831,11 +6531,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data.pop('role_selected', None)
         context.user_data.pop('reduction_edit_mode', None)
         context.user_data.pop('reduction_user_id', None)
-        context.user_data.pop('gain_parrainage_edit_mode', None)
-        context.user_data.pop('gain_parrainage_user_id', None)
         context.user_data.pop('vendeur_reduction_mode', None)
         context.user_data.pop('vendeur_user_id', None)
-        context.user_data.pop('vendeur_gain_parrainage_mode', None)
         
         # Récupérer les statistiques des rôles
         stats = get_role_statistics()
@@ -6856,7 +6553,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             [InlineKeyboardButton("➕ Ajouter un rôle", callback_data="role_add_select")],
             [InlineKeyboardButton("➖ Retirer un rôle", callback_data="role_remove_select")],
             [InlineKeyboardButton("💰 Modifier Réduction", callback_data="role_reduction_edit")],
-            [InlineKeyboardButton("🎁 Modifier Gain Parrainage", callback_data="role_gain_parrainage_edit")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_config")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -6955,43 +6651,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.error(f"Erreur lors de l'activation du mode modification de réduction: {e}")
         return
     
-    # Gestion de la modification du gain parrainage
-    if callback_data == "role_gain_parrainage_edit" and role == "admin":
-        context.user_data['gain_parrainage_edit_mode'] = True
-        message = (
-            "🎁 **Modifier le Gain Parrainage d'un Utilisateur**\n\n"
-            "📝 Envoyez l'ID de l'utilisateur (uniquement le nombre).\n\n"
-            "💡 Valeur par défaut : 10. Plage autorisée : 0-100 (2 décimales)."
-        )
-        keyboard = [[InlineKeyboardButton("❌ Annuler", callback_data="config_role")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        try:
-            await query.edit_message_text(message, reply_markup=reply_markup, parse_mode="Markdown")
-        except TelegramError as e:
-            logger.error(f"Erreur lors de l'activation du mode modification gain parrainage: {e}")
-        return
-    
     # Gestion du callback pour passer la réduction (0%)
     if callback_data == "vendeur_reduction_skip" and role == "admin":
         user_id_vendeur = context.user_data.get('vendeur_user_id')
         if user_id_vendeur:
             if set_user_reduction(user_id_vendeur, 0):
                 context.user_data.pop('vendeur_reduction_mode', None)
-                context.user_data['vendeur_gain_parrainage_mode'] = True
-                message = (
-                    f"✅ **Réduction définie !**\n\n"
+                await query.edit_message_text(
+                    f"✅ **Vendeur configuré !**\n\n"
                     f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **0%**\n\n"
-                    "🎁 **Définir le gain parrainage**\n\n"
-                    "📝 Envoyez la valeur (0-100, 2 décimales).\n\n"
-                    "💡 Exemple: 10.50 ou 15"
+                    f"💰 Réduction: **0%**",
+                    parse_mode="Markdown"
                 )
-                keyboard = [[InlineKeyboardButton("⏭️ Passer (10)", callback_data="vendeur_gain_parrainage_skip")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                try:
-                    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode="Markdown")
-                except TelegramError:
-                    pass
                 logger.info(f"Réduction définie à 0% pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}")
             else:
                 context.user_data.pop('vendeur_reduction_mode', None)
@@ -7003,28 +6674,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             context.user_data.pop('vendeur_user_id', None)
             context.user_data.pop('role_add_mode', None)
             context.user_data.pop('role_selected', None)
-        return
-    
-    # Gestion du callback pour passer le gain parrainage (10)
-    if callback_data == "vendeur_gain_parrainage_skip" and role == "admin":
-        user_id_vendeur = context.user_data.get('vendeur_user_id')
-        if user_id_vendeur:
-            if set_user_gain_parrainage(user_id_vendeur, 10.0):
-                reduction = get_user_reduction(user_id_vendeur)
-                await query.edit_message_text(
-                    f"✅ **Vendeur configuré !**\n\n"
-                    f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **{reduction}%**\n"
-                    f"🎁 Gain parrainage: **10**",
-                    parse_mode="Markdown"
-                )
-                logger.info(f"Gain parrainage défini à 10 pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}")
-            else:
-                pass
-        context.user_data.pop('vendeur_gain_parrainage_mode', None)
-        context.user_data.pop('vendeur_user_id', None)
-        context.user_data.pop('role_add_mode', None)
-        context.user_data.pop('role_selected', None)
         return
     
     if callback_data in {"role_add_vendeur", "role_add_moderator"} and role == "admin":
@@ -7235,8 +6884,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         staff_channel = get_staff_channel_id() or "Non configuré"
         staff_thread_payment = get_staff_thread_payment()
         staff_thread_payment_str = str(staff_thread_payment) if staff_thread_payment else "Non configuré"
-        staff_thread_report = get_staff_thread_report()
-        staff_thread_report_str = str(staff_thread_report) if staff_thread_report else "Non configuré"
         staff_thread_entretien = get_staff_thread_entretien()
         staff_thread_entretien_str = str(staff_thread_entretien) if staff_thread_entretien else "Non configuré"
         staff_thread_demande_access = get_staff_thread_demande_access()
@@ -7246,7 +6893,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "📢 **Configuration du Canal Staff**\n\n"
             f"📢 Canal Staff: `{staff_channel}`\n"
             f"🧵 Thread Paiement: `{staff_thread_payment_str}`\n"
-            f"📝 Thread Report: `{staff_thread_report_str}`\n"
             f"🔧 Thread Entretien: `{staff_thread_entretien_str}`\n"
             f"🔐 Thread Demande d'accès: `{staff_thread_demande_access_str}`\n\n"
             "Sélectionnez un paramètre à modifier :"
@@ -7254,7 +6900,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         keyboard = [
             [InlineKeyboardButton("📢 Modifier le Canal Staff", callback_data="config_staff_channel_edit")],
             [InlineKeyboardButton("🧵 Modifier le Thread Paiement", callback_data="config_staff_thread_payment_edit")],
-            [InlineKeyboardButton("📝 Modifier le Thread Report", callback_data="config_staff_thread_report_edit")],
             [InlineKeyboardButton("🔧 Modifier le Thread Entretien", callback_data="config_staff_thread_entretien_edit")],
             [InlineKeyboardButton("🔐 Modifier le Thread Demande d'accès", callback_data="config_staff_thread_demande_access_edit")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_config")]
@@ -7508,7 +7153,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if points_to_add < point_min or points_to_add > point_max:
                 await safe_edit_message_text(
                     query,
-                    f"❌ Le nombre de points doit être entre {point_min} et {point_max}.",
+                    f"❌ Le montant d'argent doit être entre {point_min} et {point_max}.",
                     create_back_button("shop"),
                     "HTML"
                 )
@@ -7517,15 +7162,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             if points_to_add <= 0:
                 await safe_edit_message_text(
                     query,
-                    "❌ Le nombre de points doit être supérieur à 0.",
+                    "❌ Le montant d'argent doit être supérieur à 0.",
                     create_back_button("shop"),
                     "HTML"
                 )
                 return
             
-            # Calculer le prix selon la table de paliers
-            user_reduction = get_user_reduction(user_id)
-            price_initial, price_euros = compute_points_price(points_to_add, user_reduction)
+            # Nouvelle logique simplifiée: 1€ payé = 1 argent crédité.
+            user_reduction = 0.0
+            price_initial = float(points_to_add)
+            price_euros = float(points_to_add)
             
             # Vérifier que le prix n'est pas négatif (sécurité)
             if price_euros < 0:
@@ -7545,17 +7191,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 "📋",
                 "info"
             )
-            if user_reduction > 0:
-                detail_content = (
-                    f"{format_info_card('Points à acheter', str(points_to_add), '📊')}\n"
-                    f"{format_info_card('Prix initial', f'{price_initial:.2f} €', '💵')}\n"
-                    f"{format_info_card('Total après réduction', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
-                )
-            else:
-                detail_content = (
-                    f"{format_info_card('Points à acheter', str(points_to_add), '📊')}\n"
-                    f"{format_info_card('Total', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
-                )
+            detail_content = (
+                f"{format_info_card('Argent à créditer', str(points_to_add), '📊')}\n"
+                f"{format_info_card('Total à payer', f'{price_euros:.2f} €', '💵', value_highlight=True)}"
+            )
             
             payment_section = format_section_rich(
                 "Lien de paiement",
@@ -7594,7 +7233,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 
                 # Si le prix est 0 (réduction 100%), accepter automatiquement la transaction
                 if price_euros == 0:
-                    logger.info(f"Prix final = 0€ pour user_id={user_id}, points={points_to_add} (réduction={user_reduction}%). Création et acceptation automatique.")
+                    logger.info(f"Prix final = 0€ pour user_id={user_id}, argent={points_to_add}. Création et acceptation automatique.")
                     
                     # Créer la transaction avec statut 'pending' d'abord
                     payment_id = create_pending_payment(user_id, points_to_add, price_euros)
@@ -7603,24 +7242,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                         result = accept_payment_atomic(payment_id)
                         if result:
                             payment_user_id, payment_points, new_balance = result
-                            logger.info(f"Transaction {payment_id} acceptée automatiquement (prix=0€). Points ajoutés: {payment_points}, nouveau solde: {new_balance}")
-                            # Créditer le parrain si l'acheteur en a un
-                            parrain_credit = credit_parrain_on_purchase(payment_user_id, payment_points)
-                            if parrain_credit:
-                                parrain_uid, pts_parrain = parrain_credit
-                                parrain_msg = (
-                                    f"🎁 <b>Commission parrainage !</b>\n\n"
-                                    f"Un de vos filleuls a acheté <b>{payment_points} points</b>.\n\n"
-                                    f"Vous recevez <b>{pts_parrain} points</b> sur votre balance parrainage."
-                                )
-                                await send_notification(context.bot, parrain_uid, parrain_msg)
-                                logger.info(f"Parrain {parrain_uid} crédité de {pts_parrain} points (filleul {payment_user_id} a acheté {payment_points} pts)")
+                            logger.info(f"Transaction {payment_id} acceptée automatiquement (prix=0€). Argent ajouté: {payment_points}, nouveau solde: {new_balance}")
                             
                             # Afficher un message de succès
                             success_header = format_header_rich("TRANSACTION ACCEPTÉE", "✅", "success", banner=False)
                             success_section = format_section_rich(
                                 "Statut",
-                                f"Votre achat de {payment_points} points a été accepté automatiquement (prix final: 0€).\n\nVotre nouveau solde est de {new_balance} points.",
+                                f"Votre achat de {payment_points} argent a été accepté automatiquement (prix final: 0€).\n\nVotre nouveau solde est de {new_balance} argent.",
                                 "💰",
                                 "success",
                                 highlight=True
@@ -7745,14 +7373,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                     header = format_header_rich("PAIEMENT ACCEPTÉ", "✅", "success", banner=False)
                     
                     success_section = format_section_rich(
-                        "Points ajoutés",
-                        f"<b>{points} points</b> ont été ajoutés à votre compte",
+                        "Argent ajouté",
+                        f"<b>{points} argent</b> ont été ajoutés à votre compte",
                         "💰",
                         "success",
                         highlight=True
                     )
                     
-                    solde_badge = format_highlight_box(f"Nouveau solde : {new_balance} points", "💎", "gold")
+                    solde_badge = format_highlight_box(f"Nouveau solde : {new_balance} argent", "💎", "gold")
                     
                     footer = "\n✨ Merci pour votre confiance !"
                     success_message = f"{header}\n\n{success_section}\n{solde_badge}\n\n{footer}"
@@ -8058,7 +7686,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if callback_data in {"config_min_edit", "config_max_edit", "config_card_margin_edit", 
                          "config_prix_carte_edit",
                          "config_payment_url_edit", "config_staff_channel_edit", "config_staff_thread_payment_edit", 
-                         "config_staff_thread_report_edit", "config_staff_thread_entretien_edit",
+                         "config_staff_thread_entretien_edit",
                          "config_staff_thread_demande_access_edit"} and role == "admin":
         config_labels = {
             "config_min_edit": ("Minimum de points", "point_min", "int"),
@@ -8068,7 +7696,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "config_payment_url_edit": ("URL de paiement", "payment_url", "str"),
             "config_staff_channel_edit": ("ID du Canal Staff (commence par -)", "staff_channel_id", "str"),
             "config_staff_thread_payment_edit": ("ID du Thread Paiement (nombre)", "staff_thread_payment", "int"),
-            "config_staff_thread_report_edit": ("ID du Thread Report (nombre)", "staff_thread_report", "int"),
             "config_staff_thread_entretien_edit": ("ID du Thread Entretien (nombre)", "staff_thread_entretien", "int"),
             "config_staff_thread_demande_access_edit": ("ID du Thread Demande d'accès (nombre)", "staff_thread_demande_access", "int")
         }
@@ -8077,7 +7704,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
         # Valeur par défaut selon le type
         if value_type == "int":
-            if key in ["staff_thread_payment", "staff_thread_report", "staff_thread_entretien", "staff_thread_demande_access"]:
+            if key in ["staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"]:
                 current_value = get_config_value(key, "")
             elif key == "card_margin":
                 current_value = get_config_value(key, DEFAULT_CARD_MARGIN)
@@ -8109,7 +7736,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             back_callback = "config_points"
         elif key in ["card_margin", "prix_carte"]:
             back_callback = "config_carte"
-        elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_report", "staff_thread_entretien", "staff_thread_demande_access"]:
+        elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"]:
             back_callback = "config_canal"
         else:
             back_callback = "cmd_config"
@@ -8460,8 +8087,6 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
                 [InlineKeyboardButton("👤 Moi", callback_data="cmd_moi")],
                 [InlineKeyboardButton("💰 Acheter des points", callback_data="cmd_acheter_points")],
                 [InlineKeyboardButton("🛒 Boutique", callback_data="cmd_boutique")],
-                [InlineKeyboardButton("📝 Report", callback_data="cmd_report")],
-                [InlineKeyboardButton("🧮 Calculatrice", callback_data="cmd_calc")],
                 [InlineKeyboardButton("🔙 Retour", callback_data="menu_principal")]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -8712,102 +8337,6 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             )
         return
 
-    # Vérifier si l'utilisateur est en train de saisir le montant à convertir (argent -> points)
-    if context.user_data.get(f'waiting_parrainage_convert_amount_{user_id}', False):
-        try:
-            amount = int((update.message.text or "").strip())
-            if amount <= 0:
-                await update.message.reply_text(
-                    "❌ Entrez un nombre entier positif.",
-                    parse_mode="HTML"
-                )
-                return
-            argent = get_user_argent(user_id)
-            if amount > argent:
-                await update.message.reply_text(
-                    f"❌ Vous n'avez que <b>{argent}</b> d'argent disponible.",
-                    parse_mode="HTML"
-                )
-                return
-            context.user_data.pop(f'waiting_parrainage_convert_amount_{user_id}', None)
-            context.user_data[f'parrainage_convert_amount_{user_id}'] = amount
-            header = format_header_rich("CONFIRMER LA CONVERSION", "⚠️", "orange", banner=False)
-            msg = (
-                f"{header}\n\n"
-                f"Vous allez convertir <b>{amount}</b> d'argent en points.\n\n"
-                "Confirmez-vous cette opération ?"
-            )
-            keyboard = [
-                [InlineKeyboardButton("✅ Confirmer", callback_data="parrainage_convertir_confirm")],
-                [InlineKeyboardButton("❌ Annuler", callback_data="parrainage_convertir_cancel")]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="HTML")
-        except ValueError:
-            await update.message.reply_text(
-                "❌ Entrée invalide. Veuillez entrer un nombre entier positif.",
-                parse_mode="HTML"
-            )
-        return
-
-    # Vérifier si l'utilisateur est en train de saisir un code parrain
-    if context.user_data.get(f'waiting_parrainage_code_{user_id}', False):
-        code = (update.message.text or "").strip()
-        context.user_data.pop(f'waiting_parrainage_code_{user_id}', None)
-
-        if not code:
-            await update.message.reply_text(
-                "❌ Code vide.\n\nVeuillez entrer le code parrain de la personne qui vous a invité.",
-                parse_mode="HTML"
-            )
-            return
-
-        # Vérifier que le code existe comme token_publique d'un autre user
-        parrain_user_id = get_user_id_by_token_publique(code)
-        if not parrain_user_id:
-            await update.message.reply_text(
-                "❌ <b>Code invalide</b>\n\nCe code parrain n'existe pas. Vérifiez le code et réessayez.",
-                parse_mode="HTML"
-            )
-            return
-
-        # Pas d'auto-parrainage
-        if parrain_user_id == user_id:
-            await update.message.reply_text(
-                "❌ <b>Auto-parrainage impossible</b>\n\nVous ne pouvez pas utiliser votre propre code.",
-                parse_mode="HTML"
-            )
-            return
-
-        # Enregistrer (uniquement si pas déjà de parrain)
-        if set_user_token_parrainage(user_id, code):
-            update_user_balance(user_id, PARRAINAGE_BONUS_POINTS)
-            await update.message.reply_text(
-                f"✅ <b>Parrain enregistré !</b>\n\nVotre parrain a été associé à votre compte.\n\n"
-                f"Vous venez de gagner {PARRAINAGE_BONUS_POINTS} points !",
-                parse_mode="HTML"
-            )
-            logger.info(f"Parrain {parrain_user_id} enregistré pour user {user_id}")
-
-            # Notifier le parrain
-            first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "Un utilisateur"
-            username_str = f"@{escape_html(user.username)}" if user.username else ""
-            parrain_msg = (
-                f"🎁 <b>Nouveau filleul !</b>\n\n"
-                f"Un utilisateur s'est inscrit avec votre code parrain.\n\n"
-                f"👤 {first_name}"
-            )
-            if username_str:
-                parrain_msg += f"\n📱 {username_str}"
-            parrain_msg += f"\n🆔 ID : <code>{user_id}</code>"
-            await send_notification(context.bot, parrain_user_id, parrain_msg)
-        else:
-            await update.message.reply_text(
-                "❌ Vous avez déjà un parrain (impossible de modifier).",
-                parse_mode="HTML"
-            )
-        return
-
     # Prénom pour Click&Collect (après « Continuer » sur confirmation Commander)
     if context.user_data.get('click_collect_waiting_prenom'):
         prenom_raw = (update.message.text or "").strip()
@@ -8830,6 +8359,10 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         if not cart_list:
             await update.message.reply_text("❌ Panier invalide.", parse_mode="HTML")
             return
+        await update.message.reply_text(
+            "⏳ Panier en cours, attendez au moins 1 min.",
+            parse_mode="HTML",
+        )
         if USE_TEST_CLICK_ACCOUNT:
             # Mode test : ne génère pas de carte, utilise directement le compte test
             card_data = {
@@ -8842,17 +8375,12 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             await _do_recup_token_and_session(None, update, context, user_id, card_data, prenom_raw)
             return
         else:
-            loading_msg = await update.message.reply_text("⏳ Recherche d'une carte disponible...", parse_mode="HTML")
             card_data = await generate_kfc_card(total_pts)
-            try:
-                await loading_msg.delete()
-            except TelegramError:
-                pass
             if not card_data:
-                header = format_header_rich("AUCUNE CARTE DISPONIBLE", "❌", "orange", banner=False)
+                header = format_header_rich("ERREUR STOCK CLICK", "❌", "orange", banner=False)
                 msg = (
-                    "Aucune carte valide dans la base pour ce nombre de points.\n\n"
-                    "Vous pouvez réessayer plus tard ou signaler un problème."
+                    "Probleme avec le stock pour le click, il semble ne pas avoir la quantité demander.\n\n"
+                    "Veuillez réessayer ou contacter un admin."
                 )
                 keyboard = [
                     [InlineKeyboardButton("🔄 Réessayer", callback_data="click_collect_commander_continue")],
@@ -9062,94 +8590,6 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             # On reste en mode pour permettre de réessayer
             return
     
-    # IMPORTANT: Vérifier EN PREMIER si l'utilisateur est en train d'envoyer un report
-    # Cette vérification doit être AVANT toutes les autres pour éviter que les messages soient interceptés
-    waiting_report = context.user_data.get(f'waiting_report_{user_id}', False)
-    if waiting_report:
-        logger.info(f"Report détecté pour l'utilisateur {user_id}, flag: {waiting_report}")
-        # Récupérer le message de report
-        report_text_raw = update.message.text or ""
-        
-        if not report_text_raw.strip():
-            # Message vide, ne rien faire
-            logger.warning(f"Message de report vide pour l'utilisateur {user_id}")
-            return
-        
-        # Récupérer le type de report
-        report_type = context.user_data.get(f'report_type_{user_id}', "📝 Report")
-        logger.info(f"Traitement du report pour l'utilisateur {user_id}, type: {report_type}")
-        
-        # Supprimer le message de l'utilisateur
-        try:
-            await update.message.delete()
-        except TelegramError as e:
-            logger.warning(f"Impossible de supprimer le message de report de l'utilisateur {user_id}: {e}")
-        
-        # Nettoyer les flags
-        context.user_data.pop(f'waiting_report_{user_id}', None)
-        context.user_data.pop(f'report_type_{user_id}', None)
-        
-        # Afficher le message de confirmation
-        try:
-            await update.message.reply_text("✅ **Report réussi**\n\nVotre report a été envoyé à l'administration.", parse_mode="Markdown")
-        except TelegramError as e:
-            logger.error(f"Erreur lors de l'envoi du message de confirmation: {e}")
-        
-        # Envoyer le report au thread staff
-        first_name = escape_markdown(sanitize_text(user.first_name, 64)) if user.first_name else "N/A"
-        username = escape_markdown(user.username or 'N/A')
-        report_text = escape_markdown(sanitize_text(report_text_raw, 4096))
-        
-        # Créer un identifiant unique pour ce report (user_id + timestamp)
-        import time
-        report_id = f"{user_id}_{int(time.time())}"
-        
-        report_message = (
-            f"{report_type}\n\n"
-            f"👤 **Utilisateur:**\n"
-            f"🆔 ID: `{user_id}`\n"
-            f"👤 Nom: {first_name}\n"
-            f"📱 Username: @{username}\n\n"
-            f"📝 **Message:**\n{report_text}"
-        )
-        
-        # Créer les boutons de réponse
-        keyboard = [
-            [
-                InlineKeyboardButton("✅ Répondre", callback_data=f"report_reply_{report_id}"),
-                InlineKeyboardButton("⏭️ Ignorer", callback_data=f"report_ignore_{report_id}")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        # Stocker les infos du report pour pouvoir y répondre
-        context.bot_data[f'report_info_{report_id}'] = {
-            'user_id': user_id,
-            'report_type': report_type,
-            'report_text': report_text_raw,
-            'username': username,
-            'first_name': first_name
-        }
-        
-        staff_thread_report = get_staff_thread_report()
-        success = await send_to_staff_channel(
-            context.bot,
-            report_message,
-            thread_id=staff_thread_report,
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
-        
-        if success:
-            if staff_thread_report:
-                logger.info(f"Report {report_id} envoyé au thread staff {staff_thread_report} par l'utilisateur {user_id}")
-            else:
-                logger.info(f"Report {report_id} envoyé à l'admin directement (thread non configuré) par l'utilisateur {user_id}")
-        else:
-            logger.error(f"Échec de l'envoi du report {report_id} pour l'utilisateur {user_id}")
-        
-        return
-    
     # Vérifier l'arrêt d'urgence (sauf pour les admins qui peuvent modifier la config)
     if is_emergency_stop_active():
         # Permettre uniquement aux admins de modifier la config (pour désactiver l'arrêt)
@@ -9202,7 +8642,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                     f"ℹ️ **Informations utilisateur**\n\n"
                     f"🆔 **ID:** `{user_info['user_id']}`\n"
                     f"👤 **Username:** {username_display}\n"
-                    f"💎 **Balance:** {user_info['balance']} points\n"
+                    f"💎 **Points:** {user_info['points']} points\n"
                     f"🎭 **Rôle:** {role_display}\n"
                     f"💰 **Réduction:** {reduction_rate}%\n"
                     f"📅 **Créé le:** {created_at_str}\n"
@@ -9312,142 +8752,6 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             context.user_data.pop('reduction_user_id', None)
         return
 
-    # Vérifier si l'admin est en train de modifier le gain parrainage
-    if 'gain_parrainage_edit_mode' in context.user_data and context.user_data.get('gain_parrainage_edit_mode') and role == "admin":
-        if 'gain_parrainage_user_id' not in context.user_data:
-            # Première étape : récupérer l'ID utilisateur
-            try:
-                user_id_to_edit = int(update.message.text.strip())
-                user_info = get_user_info(user_id_to_edit)
-                if not user_info:
-                    await update.message.reply_text(
-                        "❌ Utilisateur introuvable. Veuillez réessayer avec un ID valide.",
-                        parse_mode="Markdown"
-                    )
-                    return
-                
-                current_gain = get_user_gain_parrainage(user_id_to_edit)
-                context.user_data['gain_parrainage_user_id'] = user_id_to_edit
-                message = (
-                    f"🎁 **Modifier le Gain Parrainage**\n\n"
-                    f"👤 Utilisateur: `{user_id_to_edit}`\n"
-                    f"📊 Gain actuel: **{current_gain}**\n\n"
-                    "📝 Envoyez la nouvelle valeur (0-100, 2 décimales).\n\n"
-                    "💡 Exemple: 10.50 ou 15"
-                )
-                keyboard = [[InlineKeyboardButton("❌ Annuler", callback_data="config_role")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await update.message.reply_text(message, reply_markup=reply_markup, parse_mode="Markdown")
-            except ValueError:
-                await update.message.reply_text(
-                    "❌ ID invalide. Veuillez envoyer uniquement un nombre (ID utilisateur).",
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                logger.error(f"Erreur lors de la modification du gain parrainage: {e}")
-                await update.message.reply_text(
-                    "❌ Erreur lors de la modification du gain parrainage.",
-                    parse_mode="Markdown"
-                )
-        else:
-            # Deuxième étape : définir le gain parrainage
-            try:
-                gain_str = update.message.text.strip().replace(",", ".")
-                new_gain = round(float(gain_str), 2)
-                if new_gain < 0 or new_gain > 100:
-                    await update.message.reply_text(
-                        "❌ Le gain parrainage doit être entre 0 et 100. Veuillez réessayer.",
-                        parse_mode="Markdown"
-                    )
-                    return
-                
-                user_id_to_edit = context.user_data['gain_parrainage_user_id']
-                if set_user_gain_parrainage(user_id_to_edit, new_gain):
-                    await update.message.reply_text(
-                        f"✅ **Gain parrainage modifié !**\n\n"
-                        f"👤 Utilisateur: `{user_id_to_edit}`\n"
-                        f"🎁 Nouveau gain: **{new_gain}**",
-                        parse_mode="Markdown"
-                    )
-                    logger.info(f"Gain parrainage modifié pour l'utilisateur {user_id_to_edit} par l'admin {user_id}: {new_gain}")
-                else:
-                    await update.message.reply_text(
-                        "❌ Erreur lors de la modification du gain parrainage.",
-                        parse_mode="Markdown"
-                    )
-            except ValueError:
-                await update.message.reply_text(
-                    "❌ Valeur invalide. Veuillez envoyer un nombre entre 0 et 100 (ex: 10.50).",
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                logger.error(f"Erreur lors de la modification du gain parrainage: {e}")
-                await update.message.reply_text(
-                    "❌ Erreur lors de la modification du gain parrainage.",
-                    parse_mode="Markdown"
-                )
-            
-            context.user_data.pop('gain_parrainage_edit_mode', None)
-            context.user_data.pop('gain_parrainage_user_id', None)
-        return
-
-    # Mode emprunt de points (admin/vendeur uniquement)
-    if context.user_data.get("credit_points_mode") and role in ("admin", "vendeur"):
-        try:
-            raw = (update.message.text or "").strip()
-            amount = int(raw)
-            if amount <= 0:
-                await update.message.reply_text(
-                    "❌ Merci d'entrer un nombre de points positif.",
-                    parse_mode="HTML",
-                )
-                return
-
-            argent = get_user_argent(user_id)
-            max_dec = get_max_decouvert_argent()
-            max_emprunt = argent + max_dec
-            if amount > max_emprunt:
-                await update.message.reply_text(
-                    f"❌ Emprunt refusé : l'argent ne peut pas descendre en dessous de -{max_dec}.\n\n"
-                    f"Argent actuel : <b>{argent}</b> → emprunt max : <b>{max_emprunt}</b>",
-                    parse_mode="HTML",
-                )
-                return
-
-            # Effectuer le transfert : -argent, +points (avec découvert autorisé)
-            if not borrow_points_against_argent(user_id, amount):
-                await update.message.reply_text(
-                    f"❌ Impossible d'effectuer le transfert (limite d'argent : -{max_dec}).",
-                    parse_mode="HTML",
-                )
-                return
-
-            new_points = get_user_points(user_id)
-            new_argent = get_user_argent(user_id)
-
-            await update.message.reply_text(
-                f"✅ Emprunt effectué !\n\n"
-                f"💳 Vous avez emprunté <b>{amount} pts</b>.\n\n"
-                f"💎 Points actuels : <b>{new_points}</b>\n"
-                f"💰 Argent actuel : <b>{new_argent}</b>\n\n"
-                f"ℹ️ Limite : argent ≥ -{max_dec}",
-                parse_mode="HTML",
-            )
-        except ValueError:
-            await update.message.reply_text(
-                "❌ Valeur invalide. Merci d'entrer un nombre entier positif (ex: 1000).",
-                parse_mode="HTML",
-            )
-        except Exception as e:
-            logger.error(f"Erreur lors de l'emprunt de points pour {user_id}: {e}")
-            await update.message.reply_text(
-                "❌ Erreur lors de l'emprunt de points.",
-                parse_mode="HTML",
-            )
-        finally:
-            context.user_data.pop("credit_points_mode", None)
-        return
-
     # Vérifier si l'admin est en train de définir la réduction pour un nouveau vendeur (AVANT role_add_mode)
     if 'vendeur_reduction_mode' in context.user_data and context.user_data.get('vendeur_reduction_mode') and role == "admin":
         try:
@@ -9463,18 +8767,15 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             user_id_vendeur = context.user_data.get('vendeur_user_id')
             if user_id_vendeur and set_user_reduction(user_id_vendeur, reduction):
                 context.user_data.pop('vendeur_reduction_mode', None)
-                context.user_data['vendeur_gain_parrainage_mode'] = True
-                message = (
-                    f"✅ **Réduction définie !**\n\n"
+                await update.message.reply_text(
+                    f"✅ **Vendeur configuré !**\n\n"
                     f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **{reduction}**%\n\n"
-                    "🎁 **Définir le gain parrainage**\n\n"
-                    "📝 Envoyez la valeur (0-100, 2 décimales).\n\n"
-                    "💡 Exemple: 10.50 ou 15"
+                    f"💰 Réduction: **{reduction}%**",
+                    parse_mode="Markdown"
                 )
-                keyboard = [[InlineKeyboardButton("⏭️ Passer (10)", callback_data="vendeur_gain_parrainage_skip")]]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                await update.message.reply_text(message, reply_markup=reply_markup, parse_mode="Markdown")
+                context.user_data.pop('vendeur_user_id', None)
+                context.user_data.pop('role_add_mode', None)
+                context.user_data.pop('role_selected', None)
                 logger.info(f"Réduction définie pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}: {reduction}%")
             else:
                 await update.message.reply_text(
@@ -9498,52 +8799,6 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             )
         return
 
-    # Vérifier si l'admin est en train de définir le gain parrainage pour un nouveau vendeur
-    if 'vendeur_gain_parrainage_mode' in context.user_data and context.user_data.get('vendeur_gain_parrainage_mode') and role == "admin":
-        try:
-            gain_str = update.message.text.strip().replace(",", ".")
-            gain = round(float(gain_str), 2)
-            if gain < 0 or gain > 100:
-                await update.message.reply_text(
-                    "❌ Le gain parrainage doit être entre 0 et 100. Veuillez réessayer.",
-                    parse_mode="Markdown"
-                )
-                return
-
-            user_id_vendeur = context.user_data.get('vendeur_user_id')
-            if user_id_vendeur and set_user_gain_parrainage(user_id_vendeur, gain):
-                reduction = get_user_reduction(user_id_vendeur)
-                await update.message.reply_text(
-                    f"✅ **Vendeur configuré !**\n\n"
-                    f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **{reduction}%**\n"
-                    f"🎁 Gain parrainage: **{gain}**",
-                    parse_mode="Markdown"
-                )
-                logger.info(f"Gain parrainage défini pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}: {gain}")
-            else:
-                await update.message.reply_text(
-                    "❌ Erreur lors de la définition du gain parrainage.",
-                    parse_mode="Markdown"
-                )
-        except ValueError:
-            await update.message.reply_text(
-                "❌ Valeur invalide. Veuillez envoyer un nombre entre 0 et 100 (ex: 10.50).",
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.error(f"Erreur lors de la définition du gain parrainage pour vendeur: {e}")
-            await update.message.reply_text(
-                "❌ Erreur lors de la définition du gain parrainage.",
-                parse_mode="Markdown"
-            )
-
-        context.user_data.pop('vendeur_gain_parrainage_mode', None)
-        context.user_data.pop('vendeur_user_id', None)
-        context.user_data.pop('role_add_mode', None)
-        context.user_data.pop('role_selected', None)
-        return
-
     # Vérifier si l'admin est en train d'ajouter un rôle
     if 'role_add_mode' in context.user_data and context.user_data.get('role_add_mode') and role == "admin":
         role_type = context.user_data.get('role_selected')
@@ -9556,7 +8811,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                         parse_mode="Markdown"
                     )
                 elif set_user_role(user_id_to_add, role_type):
-                    _ensure_user_tokens(user_id_to_add)  # Tokens pour tous les users (parrainage, etc.)
+                    _ensure_user_tokens(user_id_to_add)
                     role_emoji = "💼" if role_type == "vendeur" else "🛡️"
                     # Si c'est un vendeur, demander la réduction
                     if role_type == "vendeur":
@@ -9642,57 +8897,6 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             context.user_data.pop('role_selected', None)
         return
     
-    # Vérifier si l'admin est en train de répondre à un report
-    if 'report_reply_mode' in context.user_data and context.user_data.get('report_reply_mode') and role == "admin":
-        report_id = context.user_data.get('report_reply_id')
-        if report_id:
-            report_info = context.bot_data.get(f'report_info_{report_id}')
-            if report_info:
-                reply_text = update.message.text or ""
-                if reply_text.strip():
-                    # Envoyer la réponse à l'utilisateur
-                    report_type = report_info.get('report_type', '📝 Report')
-                    response_message = (
-                        f"💬 **Réponse de l'admin à :\n"
-                        f"{report_type}**\n\n"
-                        f"{escape_markdown(sanitize_text(reply_text, 4096))}"
-                    )
-                    
-                    try:
-                        await context.bot.send_message(
-                            chat_id=report_info.get('user_id'),
-                            text=response_message,
-                            parse_mode="Markdown",
-                            disable_notification=True  # Pas de notification
-                        )
-                        
-                        # Confirmer à l'admin
-                        await update.message.reply_text(
-                            f"✅ **Réponse envoyée**\n\nVotre réponse a été envoyée à l'utilisateur.",
-                            parse_mode="Markdown"
-                        )
-                        
-                        logger.info(f"Réponse au report {report_id} envoyée à l'utilisateur {report_info.get('user_id')} par l'admin {user_id}")
-                    except TelegramError as e:
-                        logger.error(f"Erreur lors de l'envoi de la réponse: {e}")
-                        await update.message.reply_text(
-                            "❌ Erreur lors de l'envoi de la réponse.",
-                            parse_mode="Markdown"
-                        )
-                    
-                    # Nettoyer le mode réponse
-                    context.user_data.pop('report_reply_mode', None)
-                    context.user_data.pop('report_reply_id', None)
-                else:
-                    await update.message.reply_text("❌ Message vide. Veuillez écrire une réponse ou annuler.")
-            else:
-                await update.message.reply_text("❌ Report introuvable. Mode réponse désactivé.")
-                context.user_data.pop('report_reply_mode', None)
-                context.user_data.pop('report_reply_id', None)
-        else:
-            context.user_data.pop('report_reply_mode', None)
-        return
-    
     # Vérifier si l'admin est en train de modifier l'annonce
     if 'config_announcement_edit' in context.user_data and role == "admin":
         edit_mode = context.user_data.get('config_announcement_edit')
@@ -9720,106 +8924,6 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 
                 context.user_data.pop('config_announcement_edit', None)
             return
-    
-    # Vérifier si l'utilisateur est en train d'envoyer un report
-    # IMPORTANT: Cette vérification doit être AVANT les autres modes (report_reply_mode, etc.)
-    # pour éviter que les messages de report soient interceptés par d'autres handlers
-    waiting_report = context.user_data.get(f'waiting_report_{user_id}', False)
-    if waiting_report:
-        # Récupérer le message de report
-        report_text_raw = update.message.text or ""
-        
-        if not report_text_raw.strip():
-            # Message vide, ne rien faire
-            return
-        
-        # Récupérer le type de report
-        report_type = context.user_data.get(f'report_type_{user_id}', "📝 Report")
-        
-        # Supprimer le message de l'utilisateur
-        try:
-            await update.message.delete()
-        except TelegramError as e:
-            logger.warning(f"Impossible de supprimer le message de report de l'utilisateur {user_id}: {e}")
-        
-        # Nettoyer les flags
-        context.user_data.pop(f'waiting_report_{user_id}', None)
-        context.user_data.pop(f'report_type_{user_id}', None)
-        
-        # Afficher le message de confirmation
-        try:
-            await update.message.reply_text("✅ **Report réussi**\n\nVotre report a été envoyé à l'administration.", parse_mode="Markdown")
-        except TelegramError as e:
-            logger.error(f"Erreur lors de l'envoi du message de confirmation: {e}")
-        
-        # Envoyer le report au thread staff
-        first_name = escape_markdown(sanitize_text(user.first_name, 64)) if user.first_name else "N/A"
-        username = escape_markdown(user.username or 'N/A')
-        report_text = escape_markdown(sanitize_text(report_text_raw, 4096))
-        
-        # Créer un identifiant unique pour ce report (user_id + timestamp)
-        import time
-        report_id = f"{user_id}_{int(time.time())}"
-        
-        report_message = (
-            f"{report_type}\n\n"
-            f"👤 **Utilisateur:**\n"
-            f"🆔 ID: `{user_id}`\n"
-            f"👤 Nom: {first_name}\n"
-            f"📱 Username: @{username}\n\n"
-            f"📝 **Message:**\n{report_text}"
-        )
-        
-        # Créer les boutons de réponse
-        keyboard = [
-            [
-                InlineKeyboardButton("💬 Répondre", callback_data=f"report_reply_{report_id}"),
-                InlineKeyboardButton("⏭️ Ignorer", callback_data=f"report_ignore_{report_id}")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        # Stocker les infos du report pour référence future
-        context.bot_data[f'report_info_{report_id}'] = {
-            'user_id': user_id,
-            'report_type': report_type,
-            'report_text': report_text_raw,
-            'username': username,
-            'first_name': first_name
-        }
-        
-        staff_thread_report = get_staff_thread_report()
-        if staff_thread_report:
-            try:
-                sent_message = await send_to_staff_channel(
-                    context.bot,
-                    report_message,
-                    thread_id=staff_thread_report,
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
-                # Stocker le message_id du report pour référence
-                if hasattr(sent_message, 'message_id'):
-                    context.bot_data[f'report_msg_id_{report_id}'] = sent_message.message_id
-                logger.info(f"Report envoyé au thread staff par l'utilisateur {user_id} (report_id: {report_id})")
-            except TelegramError as e:
-                logger.error(f"Erreur lors de l'envoi du report au thread staff: {e}")
-        else:
-            # Fallback: envoyer directement à l'admin
-            try:
-                sent_message = await context.bot.send_message(
-                    chat_id=ADMIN_ID,
-                    text=report_message,
-                    parse_mode="Markdown",
-                    reply_markup=reply_markup
-                )
-                if hasattr(sent_message, 'message_id'):
-                    context.bot_data[f'report_msg_id_{report_id}'] = sent_message.message_id
-                logger.info(f"Report envoyé à l'admin (thread non configuré) par l'utilisateur {user_id} (report_id: {report_id})")
-            except TelegramError as e:
-                logger.error(f"Erreur lors de l'envoi du report à l'admin: {e}")
-        
-        return
     
     # Vérifier si l'utilisateur est en train d'éditer une configuration
     if 'config_edit' not in context.user_data:
@@ -9884,7 +8988,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 new_value = int(text)
                 # Pour les threads staff, on accepte n'importe quel entier (peut être négatif)
                 # Pour card_margin, on accepte seulement positif ou nul (0 = pas de marge)
-                if key not in ["staff_thread_payment", "staff_thread_report", "staff_thread_entretien", "staff_thread_demande_access"] and new_value < 0:
+                if key not in ["staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"] and new_value < 0:
                     await update.message.reply_text(
                         "❌ Erreur: La valeur doit être un nombre entier positif ou nul.\n"
                         "Veuillez réessayer ou annuler."
@@ -9939,7 +9043,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 back_callback = "config_points"
             elif key == "card_margin":
                 back_callback = "config_carte"
-            elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_report", "staff_thread_entretien", "staff_thread_demande_access"]:
+            elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"]:
                 back_callback = "config_canal"
             else:
                 back_callback = "cmd_config"

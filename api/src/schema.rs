@@ -23,6 +23,63 @@ diesel::table! {
 }
 
 diesel::table! {
+    click_order_history (id) {
+        id -> Int4,
+        user_id -> Int8,
+        #[max_length = 255]
+        panier_id -> Varchar,
+        session_id -> Nullable<Int4>,
+        #[max_length = 255]
+        order_uuid -> Nullable<Varchar>,
+        #[max_length = 50]
+        order_number -> Nullable<Varchar>,
+        confirmation_url -> Nullable<Text>,
+        #[max_length = 50]
+        status -> Varchar,
+        #[max_length = 255]
+        store_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        store_name -> Nullable<Varchar>,
+        #[max_length = 255]
+        store_city -> Nullable<Varchar>,
+        #[max_length = 255]
+        account_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        telegram_user -> Nullable<Varchar>,
+        #[max_length = 255]
+        email -> Nullable<Varchar>,
+        #[max_length = 100]
+        phone_number -> Nullable<Varchar>,
+        #[max_length = 255]
+        last_name -> Nullable<Varchar>,
+        #[max_length = 255]
+        first_name -> Nullable<Varchar>,
+        date_of_birth -> Nullable<Date>,
+        total_points -> Int4,
+        submitted_at -> Timestamptz,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    click_order_history_items (id) {
+        id -> Int4,
+        history_id -> Int4,
+        #[max_length = 255]
+        item_uuid -> Nullable<Varchar>,
+        #[max_length = 255]
+        loyalty_id -> Nullable<Varchar>,
+        #[max_length = 255]
+        name -> Nullable<Varchar>,
+        cost -> Int4,
+        quantity -> Int4,
+        line_total_points -> Int4,
+        modgrps -> Jsonb,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     config (key) {
         #[max_length = 255]
         key -> Varchar,
@@ -161,19 +218,18 @@ diesel::table! {
         token_publique -> Nullable<Varchar>,
         #[max_length = 64]
         token_prive -> Nullable<Varchar>,
-        argent -> Nullable<Int4>,
-        #[max_length = 64]
-        token_parrainage -> Nullable<Varchar>,
-        gain_parrainage -> Nullable<Numeric>,
     }
 }
 
 diesel::joinable!(card_purchase_history -> users (user_id));
+diesel::joinable!(click_order_history_items -> click_order_history (history_id));
 diesel::joinable!(pending_payments -> users (user_id));
 diesel::joinable!(session_items -> sessions (session_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     card_purchase_history,
+    click_order_history,
+    click_order_history_items,
     config,
     kfc_storage,
     nouveau_user,

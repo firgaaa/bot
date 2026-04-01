@@ -1,6 +1,7 @@
 """
 Service de gestion des sessions.
 """
+import json
 from typing import Any, Optional, Tuple
 
 from models.session import Session
@@ -186,3 +187,149 @@ def delete_session(panier_id: str) -> bool:
 def session_exists(panier_id: str) -> bool:
     """Vérifie si une session existe pour ce panier_id."""
     return get_session(panier_id) is not None
+
+
+def save_click_order_history_snapshot(panier_id: str) -> Optional[int]:
+    """
+    Crée un snapshot historique d'une commande Click & Collect (submit ou plus).
+    Retourne l'id de l'historique créé, ou None en cas d'erreur/inéligible.
+    """
+    try:
+        with session_lock(panier_id):
+            with get_cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, panier_id, telegram_id, account_id, store_id, store_name, store_city,
+                           order_uuid, order_number, status, telegram_user, email, phone_number,
+                           last_name, first_name, date_of_birth
+                    FROM sessions
+                    WHERE panier_id = %s
+                    """,
+                    (panier_id,),
+                )
+                session_row = cur.fetchone()
+                if not session_row:
+                    return None
+
+                status = (session_row.get("status") or "").upper()
+                if status not in ("SUBMITTED", "CHECKED_IN", "COMPLETED", "FAILED"):
+                    return None
+
+                telegram_id = session_row.get("telegram_id")
+                try:
+                    user_id = int(str(telegram_id)) if telegram_id is not None else None
+                except (TypeError, ValueError):
+                    user_id = None
+                if not user_id:
+                    return None
+
+                session_id = session_row["id"]
+                cur.execute(
+                    """
+                    SELECT item_uuid, loyalty_id, name, cost, quantity, modgrps
+                    FROM session_items
+                    WHERE session_id = %s
+                    ORDER BY id ASC
+                    """,
+                    (session_id,),
+                )
+                items = cur.fetchall() or []
+                total_points = 0
+                for item in items:
+                    cost = int(item.get("cost") or 0)
+                    qty = int(item.get("quantity") or 0)
+                    total_points += max(0, cost) * max(0, qty)
+
+                order_uuid = session_row.get("order_uuid")
+                confirmation_url = (
+                    f"https://kfc.fr/confirmation-de-commande/{order_uuid}"
+                    if order_uuid
+                    else None
+                )
+
+                cur.execute(
+                    """
+                    INSERT INTO click_order_history (
+                        user_id, panier_id, session_id, order_uuid, order_number, confirmation_url,
+                        status, store_id, store_name, store_city, account_id, telegram_user,
+                        email, phone_number, last_name, first_name, date_of_birth, total_points
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        user_id,
+                        session_row.get("panier_id"),
+                        session_id,
+                        order_uuid,
+                        session_row.get("order_number"),
+                        confirmation_url,
+                        status,
+                        session_row.get("store_id"),
+                        session_row.get("store_name"),
+                        session_row.get("store_city"),
+                        session_row.get("account_id"),
+                        session_row.get("telegram_user"),
+                        session_row.get("email"),
+                        session_row.get("phone_number"),
+                        session_row.get("last_name"),
+                        session_row.get("first_name"),
+                        session_row.get("date_of_birth"),
+                        total_points,
+                    ),
+                )
+                created = cur.fetchone()
+                if not created:
+                    return None
+                history_id = created["id"]
+
+                for item in items:
+                    cost = max(0, int(item.get("cost") or 0))
+                    qty = max(1, int(item.get("quantity") or 1))
+                    line_total = cost * qty
+                    modgrps = item.get("modgrps")
+                    modgrps_json = json.dumps(modgrps) if modgrps is not None else "[]"
+                    cur.execute(
+                        """
+                        INSERT INTO click_order_history_items (
+                            history_id, item_uuid, loyalty_id, name, cost, quantity, line_total_points, modgrps
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                        """,
+                        (
+                            history_id,
+                            item.get("item_uuid"),
+                            item.get("loyalty_id"),
+                            item.get("name"),
+                            cost,
+                            qty,
+                            line_total,
+                            modgrps_json,
+                        ),
+                    )
+
+                return history_id
+    except Exception:
+        return None
+
+
+def update_click_order_history_status(order_uuid: Optional[str], status: str) -> int:
+    """
+    Met à jour le statut d'un historique click à partir de order_uuid.
+    Retourne le nombre de lignes modifiées.
+    """
+    if not order_uuid or not status:
+        return 0
+    status = status.upper().strip()
+    if status not in ("SUBMITTED", "CHECKED_IN", "COMPLETED", "FAILED"):
+        return 0
+    with get_cursor() as cur:
+        cur.execute(
+            """
+            UPDATE click_order_history
+            SET status = %s
+            WHERE order_uuid = %s
+            """,
+            (status, order_uuid),
+        )
+        return cur.rowcount or 0

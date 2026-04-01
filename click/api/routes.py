@@ -3,7 +3,14 @@ Routes API Click & Collect.
 """
 from flask import request
 
-from services import create_session, get_session, update_session, delete_session
+from services import (
+    create_session,
+    get_session,
+    update_session,
+    delete_session,
+    save_click_order_history_snapshot,
+    update_click_order_history_status,
+)
 from utils.responses import (
     success_response,
     error_response,
@@ -169,7 +176,7 @@ def register_routes(app):
                 ErrorCode.STORE_NOT_SUPPORTED,
                 message=(
                     "Le Click & Collect de ce KFC contient des bugs côté KFC, "
-                    "il vaut mieux en choisir un autre. Pour des questions le report est disponible."
+                    "il vaut mieux en choisir un autre."
                 ),
                 details={"matched_items": matched_count, "required": loyalty.LOYALTY_MATCH_COUNT_SUPPORTED},
                 http_status=400,
@@ -781,6 +788,9 @@ def register_routes(app):
             order_number=order_number,
             status="SUBMITTED",
         )
+        history_id = save_click_order_history_snapshot(panier_id)
+        if history_id is None:
+            app.logger.warning("Snapshot historique click non créé pour panier_id=%s", panier_id)
 
         # Recharger la session pour inclure les données utilisateur stockées
         session = get_session(panier_id)
@@ -789,6 +799,7 @@ def register_routes(app):
             "order_number": order_number,
             "status": "SUBMITTED",
             "confirmation_url": f"https://kfc.fr/confirmation-de-commande/{order_uuid}",
+            "history_id": history_id,
         }
         if session:
             payload["email"] = session.email
@@ -841,6 +852,9 @@ def register_routes(app):
             )
 
         update_session(panier_id, status="CHECKED_IN")
+        updated_rows = update_click_order_history_status(session.order_uuid, "CHECKED_IN")
+        if updated_rows == 0:
+            app.logger.info("Aucun historique click à mettre à jour pour order_uuid=%s", session.order_uuid)
 
         return success_response({
             "status": "CHECKED_IN",

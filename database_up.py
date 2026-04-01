@@ -136,9 +136,6 @@ def ensure_bot_tables() -> tuple[bool, str]:
     et ajoute les colonnes manquantes.
     """
     _load_env()
-    # Découvert autorisé sur "argent" (ex-balance_parrainage). Les "points" (ex-balance) ne doivent jamais être négatifs.
-    max_decouvert_argent = int(os.getenv("MAX_DECOUVERT_ARGENT", "4000"))
-    min_argent_sql = -max_decouvert_argent
     try:
         conn = _get_db_connection()
         cur = conn.cursor()
@@ -154,9 +151,8 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 )
             """)
 
-            # Migration: renommer anciennes colonnes si elles existent (compatibilité bases existantes)
+            # Migration: renommer ancienne colonne si elle existe (compatibilité bases existantes)
             # - balance -> points
-            # - balance_parrainage -> argent
             cur.execute("""
                 DO $$ BEGIN
                     IF EXISTS (
@@ -170,19 +166,6 @@ def ensure_bot_tables() -> tuple[bool, str]:
                     END IF;
                 END $$;
             """)
-            cur.execute("""
-                DO $$ BEGIN
-                    IF EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'users' AND column_name = 'balance_parrainage'
-                    ) AND NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name = 'users' AND column_name = 'argent'
-                    ) THEN
-                        ALTER TABLE users RENAME COLUMN balance_parrainage TO argent;
-                    END IF;
-                END $$;
-            """)
 
             for col, defn in [
                 ("role", "VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'vendeur', 'moderator'))"),
@@ -190,9 +173,6 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 ("reduction", "DECIMAL(5,2) DEFAULT 0 CHECK (reduction >= 0 AND reduction <= 100)"),
                 ("token_publique", "VARCHAR(64) DEFAULT ''"),
                 ("token_prive", "VARCHAR(64) DEFAULT ''"),
-                ("token_parrainage", "VARCHAR(64) DEFAULT ''"),
-                ("argent", f"INTEGER NOT NULL DEFAULT 0 CHECK (argent >= {min_argent_sql})"),
-                ("gain_parrainage", "DECIMAL(5,2) DEFAULT 10 CHECK (gain_parrainage >= 0 AND gain_parrainage <= 100)"),
             ]:
                 cur.execute("""
                     DO $$ BEGIN
@@ -229,16 +209,19 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 END $$;
             """)
 
-            # Contraintes: points >= 0, argent >= -MAX_DECOUVERT_ARGENT
+            # Contraintes: points >= 0
             cur.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_points_check;")
             cur.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_argent_check;")
             cur.execute("ALTER TABLE users ADD CONSTRAINT users_points_check CHECK (points >= 0);")
-            cur.execute(
-                "ALTER TABLE users ADD CONSTRAINT users_argent_check CHECK (argent >= %s);" % (min_argent_sql,)
-            )
 
-            # --- Index pour optimiser les requêtes parrainage et rôles ---
-            # Index unique sur token_publique : lookup get_user_id_by_token_publique (parrainage)
+            # Migration: supprimer les anciennes colonnes obsolètes
+            cur.execute("ALTER TABLE users DROP COLUMN IF EXISTS argent;")
+            cur.execute("ALTER TABLE users DROP COLUMN IF EXISTS balance_parrainage;")
+            cur.execute("ALTER TABLE users DROP COLUMN IF EXISTS token_parrainage;")
+            cur.execute("ALTER TABLE users DROP COLUMN IF EXISTS gain_parrainage;")
+
+            # --- Index pour optimiser les requêtes sur users ---
+            # Index unique sur token_publique
             cur.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_token_publique
                 ON users (token_publique)
@@ -362,13 +345,11 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 ("payment_url", _get_env_config("CONFIG_PAYMENT_URL", "")),
                 ("staff_channel_id", _get_env_config("CONFIG_STAFF_CHANNEL_ID", "")),
                 ("staff_thread_payment", _get_env_config("CONFIG_STAFF_THREAD_PAYMENT", "")),
-                ("staff_thread_report", _get_env_config("CONFIG_STAFF_THREAD_REPORT", "")),
                 ("staff_thread_entretien", _get_env_config("CONFIG_STAFF_THREAD_ENTRETIEN", "")),
                 ("staff_thread_demande_access", _get_env_config("CONFIG_STAFF_THREAD_DEMANDE_ACCESS", "")),
                 ("emergency_stop", _get_env_config("CONFIG_EMERGENCY_STOP", "false").lower()),
                 ("announcement_text", _get_env_config("CONFIG_ANNOUNCEMENT_TEXT", "")),
                 ("announcement_photo", _get_env_config("CONFIG_ANNOUNCEMENT_PHOTO", "")),
-                ("max_decouvert_argent", _get_env_config("CONFIG_MAX_DECOUVERT_ARGENT", str(max_decouvert_argent))),
             ]
             for key, value in config_from_env:
                 # 1) Insérer la clé si elle n'existe pas
@@ -387,6 +368,8 @@ def ensure_bot_tables() -> tuple[bool, str]:
 
             # Migration: supprimer reduction_carte si présent (remplacé par prix_carte)
             cur.execute("DELETE FROM config WHERE key = 'reduction_carte'")
+            cur.execute("DELETE FROM config WHERE key = 'max_decouvert_argent'")
+            cur.execute("DELETE FROM config WHERE key = 'staff_thread_report'")
 
             conn.commit()
             print("  Config sync .env -> DB OK.")
@@ -436,6 +419,7 @@ def ensure_click_tables() -> tuple[bool, str]:
         "003_telegram_user.sql",
         "004_panier_id_telegram_id.sql",
         "005_user_info_session.sql",
+        "006_click_order_history.sql",
     ]
     current_migration = ""
     try:
