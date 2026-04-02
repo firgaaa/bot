@@ -144,7 +144,7 @@ def ensure_bot_tables() -> tuple[bool, str]:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     user_id BIGINT PRIMARY KEY,
-                    points INTEGER NOT NULL DEFAULT 0 CHECK (points >= 0),
+                    points DECIMAL(12,2) NOT NULL DEFAULT 0 CHECK (points >= 0),
                     role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'vendeur', 'moderator')),
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -192,7 +192,19 @@ def ensure_bot_tables() -> tuple[bool, str]:
                         SELECT 1 FROM information_schema.columns
                         WHERE table_name = 'users' AND column_name = 'points'
                     ) THEN
-                        ALTER TABLE users ADD COLUMN points INTEGER NOT NULL DEFAULT 0;
+                        ALTER TABLE users ADD COLUMN points DECIMAL(12,2) NOT NULL DEFAULT 0;
+                    END IF;
+                END $$;
+            """)
+
+            # Migration: points INTEGER -> DECIMAL(12,2) pour gérer un solde utilisateur flottant
+            cur.execute("""
+                DO $$ BEGIN
+                    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'points') THEN
+                        IF (SELECT data_type FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'points') = 'integer' THEN
+                            ALTER TABLE users ALTER COLUMN points TYPE DECIMAL(12,2) USING COALESCE(points, 0)::numeric;
+                            ALTER TABLE users ALTER COLUMN points SET DEFAULT 0;
+                        END IF;
                     END IF;
                 END $$;
             """)

@@ -24,7 +24,7 @@ git remote add origin https://github.com/VOTRE_USERNAME/bot.git
 # Ajouter les 2 dossiers api et main + le .gitignore
 git add .
 git status
-git commit -m "Initial: ajout des dossiers api et main"
+git commit -m "Initial: new bot"
 
 # Envoyer sur GitHub
 git push -u origin main

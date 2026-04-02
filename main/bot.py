@@ -424,12 +424,12 @@ def verify_bot_tables_exist() -> None:
         raise
 
 
-def get_or_create_user(user_id: int, username: Optional[str] = None) -> tuple[int, bool]:
+def get_or_create_user(user_id: int, username: Optional[str] = None) -> tuple[float, bool]:
     """
     Récupère ou crée un utilisateur dans la base de données PostgreSQL.
     Met à jour le username si fourni.
     Génère token_publique et token_prive à la création ou si manquants.
-    Retourne (points, is_new_user)
+    Retourne (argent, is_new_user)
     """
     try:
         with get_db_connection() as conn:
@@ -453,7 +453,7 @@ def get_or_create_user(user_id: int, username: Optional[str] = None) -> tuple[in
                         "UPDATE users SET username = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
                         (username, user_id),
                     )
-                return points, False
+                return float(points or 0), False
             else:
                 # Créer l'utilisateur avec solde 0 et tokens
                 pub = derive_public_token(user_id)
@@ -466,14 +466,14 @@ def get_or_create_user(user_id: int, username: Optional[str] = None) -> tuple[in
                 )
                 if cursor.rowcount > 0:
                     logger.info(f"Nouvel utilisateur créé dans la DB: {user_id}")
-                    return 0, True
+                    return 0.0, True
                 else:
                     cursor.execute("SELECT points FROM users WHERE user_id = %s", (user_id,))
                     result = cursor.fetchone()
-                    return result[0] if result else 0, False
+                    return float(result[0]) if result else 0.0, False
     except psycopg2.Error as e:
         logger.error(f"Erreur lors de la récupération/création de l'utilisateur {user_id}: {e}")
-        return 0, False
+        return 0.0, False
 
 
 def user_exists_in_users(user_id: int) -> bool:
@@ -571,10 +571,10 @@ def set_demande_refuse(user_id: int) -> None:
         return 0
 
 
-def get_users_paginated(page: int = 0, per_page: int = 20) -> tuple[list[tuple[int, Optional[str], int, str, int]], int]:
+def get_users_paginated(page: int = 0, per_page: int = 20) -> tuple[list[tuple[int, Optional[str], float, str, float]], int]:
     """
     Récupère une page d'utilisateurs avec pagination.
-    Retourne ([(user_id, username, points, role, reduction), ...], total_pages)
+    Retourne ([(user_id, username, argent, role, reduction), ...], total_pages)
     Note: Le rôle de l'admin principal (ADMIN_ID) est toujours "admin" même s'il n'est pas dans la DB.
     """
     try:
@@ -622,7 +622,7 @@ def get_user_info(user_id: int) -> Optional[dict]:
             row = cursor.fetchone()
             if row:
                 reduction_val = round(float(row[4] or 0), 2)
-                points_val = int(row[2] or 0)
+                points_val = float(row[2] or 0)
                 return {
                     'user_id': row[0],
                     'username': row[1],
@@ -638,14 +638,14 @@ def get_user_info(user_id: int) -> Optional[dict]:
         return None
 
 
-def update_user_points(user_id: int, points_to_add: int) -> bool:
+def update_user_points(user_id: int, points_to_add: float) -> bool:
     """
-    Met à jour les "points" de l'utilisateur de manière atomique avec lock FOR UPDATE.
+    Met à jour l'argent utilisateur de manière atomique avec lock FOR UPDATE.
     Accepte des valeurs positives (crédit) et négatives (débit) mais refuse tout résultat < 0.
     """
     try:
-        if points_to_add == 0:
-            logger.warning("Tentative de mise à jour du solde avec 0 point ignorée")
+        if abs(float(points_to_add)) < 1e-9:
+            logger.warning("Tentative de mise à jour du solde avec 0 montant ignorée")
             return False
 
         with get_db_connection() as conn:
@@ -662,12 +662,12 @@ def update_user_points(user_id: int, points_to_add: int) -> bool:
                 logger.warning(f"Tentative de mise à jour du solde pour un utilisateur inexistant: {user_id}")
                 return False
 
-            current_points = int(result[0] or 0)
-            new_points = current_points + int(points_to_add)
+            current_points = float(result[0] or 0)
+            new_points = current_points + float(points_to_add)
             if new_points < 0:
                 logger.warning(
-                    f"Tentative de débit de {points_to_add} points impossible pour {user_id}: "
-                    f"points actuels {current_points}, résulterait en {new_points}"
+                    f"Tentative de débit de {points_to_add} argent impossible pour {user_id}: "
+                    f"argent actuel {current_points}, résulterait en {new_points}"
                 )
                 return False
 
@@ -690,32 +690,32 @@ def update_user_points(user_id: int, points_to_add: int) -> bool:
         return False
 
 
-def get_user_points(user_id: int) -> int:
-    """Récupère les points de l'utilisateur"""
+def get_user_points(user_id: int) -> float:
+    """Récupère l'argent de l'utilisateur (compat nom historique)."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT points FROM users WHERE user_id = %s", (user_id,))
             result = cursor.fetchone()
-            return result[0] if result else 0
+            return float(result[0]) if result else 0.0
     except psycopg2.Error as e:
         logger.error(f"Erreur lors de la récupération du solde pour l'utilisateur {user_id}: {e}")
-        return 0
+        return 0.0
 
 
-def get_user_balance(user_id: int) -> int:
+def get_user_balance(user_id: int) -> float:
     """Alias compat : ancien nom."""
     return get_user_points(user_id)
 
 
-def deduct_user_balance_atomic(user_id: int, points_to_deduct: int) -> bool:
+def deduct_user_balance_atomic(user_id: int, points_to_deduct: float) -> bool:
     """
-    Déduit des points du solde de l'utilisateur de manière atomique avec lock FOR UPDATE.
+    Déduit de l'argent du solde utilisateur de manière atomique.
     Retourne True si la déduction a réussi, False sinon (solde insuffisant ou erreur).
     """
     try:
-        if points_to_deduct <= 0:
-            logger.warning(f"Tentative de déduction de points négatifs ou nuls: {points_to_deduct}")
+        if float(points_to_deduct) <= 0:
+            logger.warning(f"Tentative de déduction d'argent négative ou nulle: {points_to_deduct}")
             return False
 
         # On réutilise la primitive centrale sur les points (ne peuvent jamais être négatifs).
@@ -2570,11 +2570,11 @@ def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
             # Nouvelle logique achat: 1€ payé = 1 argent crédité.
             # On crédite selon le prix, avec fallback historique sur "points".
             try:
-                credited_amount = int(round(float(price))) if price is not None else 0
+                credited_amount = float(price) if price is not None else 0.0
             except (TypeError, ValueError):
-                credited_amount = 0
+                credited_amount = 0.0
             if credited_amount <= 0:
-                credited_amount = int(points or 0)
+                credited_amount = float(points or 0)
             
             # Vérifier que l'utilisateur existe et lock sur la ligne utilisateur
             cursor.execute(
@@ -2613,7 +2613,7 @@ def accept_payment_atomic(payment_id: int) -> Optional[tuple]:
                 conn.rollback()
                 return None
             
-            logger.info(f"Paiement {payment_id} accepté atomiquement: user_id={user_id}, argent={credited_amount}, new_balance={new_balance}")
+            logger.info(f"Paiement {payment_id} accepté atomiquement: user_id={user_id}, argent={credited_amount:.2f}, new_balance={float(new_balance):.2f}")
             return (user_id, credited_amount, new_balance)
             
     except psycopg2.Error as e:
@@ -4183,7 +4183,7 @@ async def _do_recup_token_and_session(
                 qty = 1
             total_argent += unit_price * max(1, qty)
         if total_argent > 0:
-            debit_amount = int(round(total_argent))
+            debit_amount = total_argent
             ok_debit = update_user_points(user_id, -debit_amount)
             if not ok_debit:
                 logger.warning(
@@ -5758,11 +5758,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         total_argent = _cart_total_argent(cart_list)
         # Vérification du solde local avant confirmation définitive
         user_balance = get_user_balance(user_id)
-        if user_balance < int(round(total_argent)):
+        if user_balance < total_argent:
             header = format_header_rich("ARGENT INSUFFISANT", "⚠️", "orange", banner=False)
             msg = (
                 f"Votre panier contient <b>{total_argent:.2f} euro</b>, mais votre solde actuel est de "
-                f"<b>{user_balance} argent</b>.\n\n"
+                f"<b>{float(user_balance):.2f} argent</b>.\n\n"
                 "Rechargez votre solde en achetant de l'argent, ou réduisez le contenu du panier."
             )
             keyboard = [
@@ -5884,7 +5884,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             cart_list = cart if isinstance(cart, list) else list((cart or {}).values())
             total_argent = _cart_total_argent(cart_list)
             if total_argent > 0:
-                debit_amount = int(round(total_argent))
+                debit_amount = total_argent
                 ok_debit = update_user_points(user_id, -debit_amount)
                 if not ok_debit:
                     logger.warning(
