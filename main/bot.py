@@ -4,43 +4,43 @@ Optimisé en sécurité, vitesse et efficacité de logique
 """
 
 LOYALTY_PRODUCTS = {
-    "loyalty-2385": {"price": 5, "label": "Accompagnements", "name": "Moyennes Frites", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-2383": {"price": 5, "label": "Accompagnements", "name": "Cobette® épi de maïs", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-3485": {"price": 5, "label": "Accompagnements", "name": "3 Crousti' Fromage Mozarella", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-3484": {"price": 5, "label": "Accompagnements", "name": "Crousti Fromage Raclette x3", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-3487": {"price": 5, "label": "Accompagnements", "name": "The Onion Rings X5", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-2403": {"price": 5, "label": "Accompagnements", "name": "Thé", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-2397": {"price": 5, "label": "Accompagnements", "name": "Espresso", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-2396": {"price": 5, "label": "Accompagnements", "name": "Double Espresso", "cost": 150, "categorie": "BONS PLANS"},
-    "loyalty-2697": {"price": 5, "label": "gateau", "name": "Cookie Double Choco", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-2323": {"price": 5, "label": "glace", "name": "Crousti'Kream Fraise", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-2321": {"price": 5, "label": "glace", "name": "Crousti'Kream Snickers®", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-3440": {"price": 5, "label": "glace", "name": "Crousti'Kream Nutella®", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-3289": {"price": 5, "label": "gateau", "name": "Muffin Fondant Noisette", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-3472": {"price": 5, "label": "burger", "name": "Crispy Burger Chicken", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-3473": {"price": 5, "label": "burger", "name": "Crispy Burger Fish", "cost": 600, "categorie": "GOURMANDISES"},
-    "loyalty-1278": {"price": 5, "label": "burger", "name": "Menu Kentucky® BBQ & Bacon", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-2335": {"price": 5, "label": "bucket", "name": "Bucket 10 Tenders®", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-2337": {"price": 5, "label": "bucket", "name": "Bucket 16 Hot Wings®", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-2405": {"price": 5, "label": "bucket", "name": "Bucket 7 Tenders® + 7 Hot Wings®", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-1279": {"price": 5, "label": "burger", "name": "Menu Double Kentucky Burger", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-1670": {"price": 5, "label": "burger", "name": "Menu Crispy Naan Creamy & Cheese", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-1675": {"price": 5, "label": "burger", "name": "Menu Crispy Spicy Naan Tikka", "cost": 1000, "categorie": "MEGA DEALS"},
-    "loyalty-9000": {"price": 5, "label": "bucket", "name": "Menu enfant : P'tit Bucket®", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-1259": {"price": 5, "label": "burger", "name": "Menu Colonel Original Veggie", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-1162": {"price": 5, "label": "burger", "name": "Menu Tower® Cheese & Bacon", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-1050": {"price": 5, "label": "burger", "name": "Menu Boxmaster® Original", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-1051": {"price": 5, "label": "burger", "name": "Menu Boxmaster® Spicy", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-1254": {"price": 5, "label": "burger", "name": "Menu Colonel® Original", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-2302": {"price": 5, "label": "bucket", "name": "Menu 5 Tenders®", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-2103": {"price": 5, "label": "bucket", "name": "Menu 8 Hot Wings®", "cost": 800, "categorie": "MENUS CRISPY"},
-    "loyalty-3470": {"price": 5, "label": "burger", "name": "iTWIST®", "cost": 300, "categorie": "PETIT CREUX"},
-    "loyalty-2368": {"price": 5, "label": "Accompagnements", "name": "Kentucky® Fries", "cost": 300, "categorie": "PETIT CREUX"},
-    "loyalty-3482": {"price": 5, "label": "Accompagnements", "name": "2 Tenders", "cost": 300, "categorie": "PETIT CREUX"},
-    "loyalty-3481": {"price": 5, "label": "Accompagnements", "name": "3 Hot Wings", "cost": 300, "categorie": "PETIT CREUX"},
-    "loyalty-3478": {"price": 5, "label": "burger", "name": "Krunchy®", "cost": 300, "categorie": "PETIT CREUX"},
-    "loyalty-2516": {"price": 5, "label": "glace", "name": "Sundae Chocolat Noisette", "cost": 300, "categorie": "PETIT CREUX"},
-    "loyalty-3441": {"price": 5, "label": "glace", "name": "Sundae Caramel", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-2385": {"price": 3.20, "label": "Accompagnements", "name": "Moyennes Frites", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2383": {"price": 2.20, "label": "Accompagnements", "name": "Cobette® épi de maïs", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-3485": {"price": 2.95, "label": "Accompagnements", "name": "3 Crousti' Fromage Mozarella", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-3484": {"price": 2.95, "label": "Accompagnements", "name": "Crousti Fromage Raclette x3", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-3487": {"price": 2.95, "label": "Accompagnements", "name": "The Onion Rings X5", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2403": {"price": 2.00, "label": "Accompagnements", "name": "Thé", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2397": {"price": 1.60, "label": "Accompagnements", "name": "Espresso", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2396": {"price": 3.00, "label": "Accompagnements", "name": "Double Espresso", "cost": 150, "categorie": "BONS PLANS"},
+    "loyalty-2697": {"price": 2.95, "label": "gateau", "name": "Cookie Double Choco", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-2323": {"price": 3.95, "label": "glace", "name": "Crousti'Kream Fraise", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-2321": {"price": 3.95, "label": "glace", "name": "Crousti'Kream Snickers®", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3440": {"price": 3.95, "label": "glace", "name": "Crousti'Kream Nutella®", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3289": {"price": 3.60, "label": "gateau", "name": "Muffin Fondant Noisette", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3472": {"price": 3.95, "label": "burger", "name": "Crispy Burger Chicken", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-3473": {"price": 3.95, "label": "burger", "name": "Crispy Burger Fish", "cost": 600, "categorie": "GOURMANDISES"},
+    "loyalty-1278": {"price": 11.95, "label": "burger", "name": "Menu Kentucky® BBQ & Bacon", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-2335": {"price": 17.45, "label": "bucket", "name": "Bucket 10 Tenders®", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-2337": {"price": 17.455, "label": "bucket", "name": "Bucket 16 Hot Wings®", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-2405": {"price": 17.45, "label": "bucket", "name": "Bucket 7 Tenders® + 7 Hot Wings®", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-1279": {"price": 13.15, "label": "burger", "name": "Menu Double Kentucky Burger", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-1670": {"price": 11.45, "label": "burger", "name": "Menu Crispy Naan Creamy & Cheese", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-1675": {"price": 11.45, "label": "burger", "name": "Menu Crispy Spicy Naan Tikka", "cost": 1000, "categorie": "MEGA DEALS"},
+    "loyalty-9000": {"price": 4.95, "label": "bucket", "name": "Menu enfant : P'tit Bucket®", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1259": {"price": 9.25, "label": "burger", "name": "Menu Colonel Original Veggie", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1162": {"price": 10.85, "label": "burger", "name": "Menu Tower® Cheese & Bacon", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1050": {"price": 9.95, "label": "burger", "name": "Menu Boxmaster® Original", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1051": {"price": 9.95, "label": "burger", "name": "Menu Boxmaster® Spicy", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-1254": {"price": 9.25, "label": "burger", "name": "Menu Colonel® Original", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-2302": {"price": 9.95, "label": "bucket", "name": "Menu 5 Tenders®", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-2103": {"price": 9.95, "label": "bucket", "name": "Menu 8 Hot Wings®", "cost": 800, "categorie": "MENUS CRISPY"},
+    "loyalty-3470": {"price": 2.70, "label": "burger", "name": "iTWIST®", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-2368": {"price": 4.10, "label": "Accompagnements", "name": "Kentucky® Fries", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3482": {"price": 3.95, "label": "Accompagnements", "name": "2 Tenders", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3481": {"price": 3.95, "label": "Accompagnements", "name": "3 Hot Wings", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3478": {"price": 2.50, "label": "burger", "name": "Krunchy®", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-2516": {"price": 2.30, "label": "glace", "name": "Sundae Chocolat Noisette", "cost": 300, "categorie": "PETIT CREUX"},
+    "loyalty-3441": {"price": 2.30, "label": "glace", "name": "Sundae Caramel", "cost": 300, "categorie": "PETIT CREUX"},
 }
 
 # Source produit locale (table/dictionnaire de référence pour l'interface Click&Collect)
@@ -152,16 +152,16 @@ except ValueError as e:
     MODERATOR_ID: Final[int] = 0
     SELLER_ID: Final[int] = 0
 
-# Constantes - Configuration des points (valeurs par défaut)
-DEFAULT_POINT_MIN: Final[int] = 150  # Minimum de points (par défaut)
-DEFAULT_POINT_MAX: Final[int] = 2500  # Maximum de points (par défaut)
-POINT_INCREMENT: Final[int] = 50  # Palier de points (fixe)
-DEFAULT_CARD_MARGIN: Final[int] = 300  # Marge par défaut pour l'achat de cartes (points supplémentaires)
+# Constantes - Configuration des montants d'achat (1€ = 1 point)
+DEFAULT_POINT_MIN: Final[int] = 10  # Minimum d'achat (en euros/points)
+DEFAULT_POINT_MAX: Final[int] = 2500  # Maximum d'achat (en euros/points)
+POINT_INCREMENT: Final[int] = 1  # Pas d'ajustement dans l'interface +/-
+DEFAULT_CARD_MARGIN: Final[int] = 150  # Marge par défaut pour l'achat de cartes (points supplémentaires)
 
 # Table de prix par palier (prix pour 1 point, en euros)
 # La clé représente le palier minimum de points atteint.
 PRICE_TABLE: Final[Dict[int, float]] = {
-    1: 0.005000,
+    1   : 0.005000,
     1100: 0.004850,
     1200: 0.004740,
     1250: 0.004700,
@@ -228,13 +228,13 @@ CARTE_PRICE_TABLE: Final[Dict[int, float]] = {
     2500: 0.8,
 }
 
-# Formules d'achat de points : libellé -> points par défaut pour l'interface +/-
+# Formules d'achat : libellé -> montant de départ (euros/points)
 POINTS_FORMULA_DEFAULTS: Final[Dict[str, int]] = {
-    "solo": 1000,
-    "duo": 2500,
-    "petit_groupe": 4000,
-    "gros_groupe": 8000,
-    "revendeur": 10000,
+    "solo": 10,
+    "duo": 25,
+    "petit_groupe": 40,
+    "gros_groupe": 80,
+    "revendeur": 100,
 }
 
 
@@ -270,8 +270,8 @@ KFC_API_GENERATE_TIMEOUT: Final[int] = _parse_kfc_generate_timeout()
 
 # Mapping des clés config DB -> variables d'environnement (fallback si la DB n'a pas la clé)
 CONFIG_KEY_TO_ENV: Final[Dict[str, str]] = {
-    "point_min": "CONFIG_POINT_MIN",
-    "point_max": "CONFIG_POINT_MAX",
+    "point_min": "CONFIG_ARGENT_MIN",
+    "point_max": "CONFIG_ARGENT_MAX",
     "card_margin": "CONFIG_CARD_MARGIN",
     "payment_url": "CONFIG_PAYMENT_URL",
     "staff_channel_id": "CONFIG_STAFF_CHANNEL_ID",
@@ -1537,13 +1537,13 @@ def update_config_value(key: str, value: any) -> bool:
                 logger.warning(f"Tentative de définir un prix négatif ou nul: {value_float}")
                 return False
             value = str(value_float)
-        elif key == "point_min":
+        elif key in ("point_min", "argent_min"):
             value_int = int(value)
             if value_int < 0:
                 logger.warning(f"Tentative de définir un minimum négatif: {value_int}")
                 return False
             value = str(value_int)
-        elif key == "point_max":
+        elif key in ("point_max", "argent_max"):
             value_int = int(value)
             if value_int <= 0:
                 logger.warning(f"Tentative de définir un maximum négatif ou nul: {value_int}")
@@ -1655,14 +1655,36 @@ def update_config_value(key: str, value: any) -> bool:
         return False
 
 
+def get_argent_min() -> int:
+    """Récupère le minimum d'achat d'argent (avec fallback compat)."""
+    value = _get_cached_config("argent_min", None)
+    if value is None:
+        value = _get_cached_config("point_min", DEFAULT_POINT_MIN)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_POINT_MIN
+
+
+def get_argent_max() -> int:
+    """Récupère le maximum d'achat d'argent (avec fallback compat)."""
+    value = _get_cached_config("argent_max", None)
+    if value is None:
+        value = _get_cached_config("point_max", DEFAULT_POINT_MAX)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return DEFAULT_POINT_MAX
+
+
 def get_point_min() -> int:
-    """Récupère le minimum de points (avec cache)"""
-    return _get_cached_config("point_min", DEFAULT_POINT_MIN)
+    """Alias compat historique."""
+    return get_argent_min()
 
 
 def get_point_max() -> int:
-    """Récupère le maximum de points (avec cache)"""
-    return _get_cached_config("point_max", DEFAULT_POINT_MAX)
+    """Alias compat historique."""
+    return get_argent_max()
 
 
 def get_price_per_point(points: int) -> float:
@@ -3627,7 +3649,7 @@ async def show_shop_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     keyboard = [
         # Catégorie ACHATS (orange)
         [
-            InlineKeyboardButton("💰 Acheter argent", callback_data="cmd_acheter_points"),
+            InlineKeyboardButton("💰 Achat de solde", callback_data="cmd_acheter_points"),
             InlineKeyboardButton("🛒 Boutique", callback_data="cmd_boutique")
         ],
         # Catégorie INFORMATIONS (bleu)
@@ -4359,7 +4381,7 @@ async def show_points_formula_choice(update: Update, context: ContextTypes.DEFAU
         logger.warning("show_points_formula_choice appelé sans utilisateur valide")
         return
 
-    header = format_header_rich("ACHAT D'ARGENT", "💰", "orange", banner=False)
+    header = format_header_rich("AJOUTER DU SOLDE 💰", "💰", "orange", banner=False)
     intro = format_section_rich(
         "Choisissez une formule",
         "Sélectionnez le type d'achat pour partir avec une quantité d'argent adaptée. Vous pourrez ensuite ajuster !",
@@ -4369,11 +4391,11 @@ async def show_points_formula_choice(update: Update, context: ContextTypes.DEFAU
     message = f"{header}\n\n{intro}"
 
     keyboard = [
-        [InlineKeyboardButton("Solo", callback_data="points_formula_solo")],
-        [InlineKeyboardButton("Duo", callback_data="points_formula_duo")],
-        [InlineKeyboardButton("Petit groupe", callback_data="points_formula_petit_groupe")],
-        [InlineKeyboardButton("Gros groupe", callback_data="points_formula_gros_groupe")],
-        [InlineKeyboardButton("Revendeur", callback_data="points_formula_revendeur")],
+        [InlineKeyboardButton(f"Solo — {POINTS_FORMULA_DEFAULTS['solo']}€", callback_data="points_formula_solo")],
+        [InlineKeyboardButton(f"Duo — {POINTS_FORMULA_DEFAULTS['duo']}€", callback_data="points_formula_duo")],
+        [InlineKeyboardButton(f"Petit groupe — {POINTS_FORMULA_DEFAULTS['petit_groupe']}€", callback_data="points_formula_petit_groupe")],
+        [InlineKeyboardButton(f"Gros groupe — {POINTS_FORMULA_DEFAULTS['gros_groupe']}€", callback_data="points_formula_gros_groupe")],
+        [InlineKeyboardButton(f"Revendeur — {POINTS_FORMULA_DEFAULTS['revendeur']}€", callback_data="points_formula_revendeur")],
         [InlineKeyboardButton("🔙 Retour au shop", callback_data="cmd_shop")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -4411,13 +4433,13 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     price_euros = float(selected_points)
     
     # Construire le message avec le nouveau système esthétique
-    header = format_header_rich("ACHAT D'ARGENT 💰", "💰", "orange", banner=False)
+    header = format_header_rich("AJOUTER DU SOLDE 💰", "💰", "orange", banner=False)
     
     # Section sélection mise en évidence
     selection_box = format_section_rich(
         "RESUMER",
         "",
-        "📊",
+        "",
         "info"
     )
     
@@ -4427,7 +4449,7 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
     
     # Informations en section normale
     info_text = (
-        "💡 Règle appliquée : <b>1€ payé = 1 argent crédité</b>.\n\n"
+        "💡 Rappel : <b>1€ payé = 1€ de solde utilisable dans le shop !</b>.\n\n"
         "<i>Utilisez les boutons ci-dessous pour ajuster</i>"
     )
     info_section = format_section_rich(
@@ -4437,13 +4459,13 @@ async def show_points_purchase_interface(update: Update, context: ContextTypes.D
         "info"
     )
     
-    message = f"{header}\n\n\n{selection_box}\n- <b>{selected_points} argent</b>\n{price_box}{reduction_info}\n\n{info_section}"
+    message = f"{header}\n\n{selection_box}\n- <b>{selected_points}€ </b>\n{price_box}{reduction_info}\n\n{info_section}"
     
     # Boutons organisés visuellement
     keyboard = [
         [
-            InlineKeyboardButton("➖ -50", callback_data=f"points_dec_{selected_points}"),
-            InlineKeyboardButton("➕ +50", callback_data=f"points_inc_{selected_points}")
+            InlineKeyboardButton(f"➖ -{POINT_INCREMENT}", callback_data=f"points_dec_{selected_points}"),
+            InlineKeyboardButton(f"➕ +{POINT_INCREMENT}", callback_data=f"points_inc_{selected_points}")
         ],
         [InlineKeyboardButton("✅ Valider l'achat", callback_data=f"points_validate_{selected_points}")],
         [
@@ -6484,7 +6506,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         keyboard = [
             [InlineKeyboardButton("👤 Rôle", callback_data="config_role")],
             [InlineKeyboardButton("💳 Paiement", callback_data="config_payement")],
-            [InlineKeyboardButton("💰 Points", callback_data="config_points")],
+            [InlineKeyboardButton("💰 Argent", callback_data="config_points")],
             [InlineKeyboardButton("🎴 Carte", callback_data="config_carte")],
             [InlineKeyboardButton("📢 Canal", callback_data="config_canal")],
             [InlineKeyboardButton("📢 Annonce", callback_data="config_annonce")],
@@ -6823,13 +6845,13 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Nettoyer config_edit si présent (annulation d'édition)
         context.user_data.pop('config_edit', None)
         
-        point_min = get_point_min()
-        point_max = get_point_max()
+        point_min = get_argent_min()
+        point_max = get_argent_max()
         
         message = (
-            "💰 **Configuration des Points**\n\n"
-            f"📊 Minimum: **{point_min} points**\n"
-            f"📈 Maximum: **{point_max} points**\n\n"
+            "💰 **Configuration de l'argent**\n\n"
+            f"📊 Minimum: **{point_min} argent**\n"
+            f"📈 Maximum: **{point_max} argent**\n\n"
             "Sélectionnez un paramètre à modifier :"
         )
         keyboard = [
@@ -7206,7 +7228,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             
             instructions_section = format_section_rich(
                 "Instructions",
-                "📸 Après avoir effectué le paiement, veuillez envoyer une capture d'écran comme preuve de paiement.\n\n⏳ Votre transaction est en attente de validation.",
+                "Saisissez l'adresse securisée ci-dessus, et envoyer la somme attendu. Après avoir effectué le paiement, revenez ici et veuillez envoyer une capture d'écran paypal comme preuve de paiement.\n\n⏳ Votre transaction est en attente de preuve.",
                 "📸",
                 "warning"
             )
@@ -7689,8 +7711,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                          "config_staff_thread_entretien_edit",
                          "config_staff_thread_demande_access_edit"} and role == "admin":
         config_labels = {
-            "config_min_edit": ("Minimum de points", "point_min", "int"),
-            "config_max_edit": ("Maximum de points", "point_max", "int"),
+            "config_min_edit": ("Minimum d'argent", "argent_min", "int"),
+            "config_max_edit": ("Maximum d'argent", "argent_max", "int"),
             "config_card_margin_edit": ("Marge pour l'achat de cartes (points)", "card_margin", "int"),
             "config_prix_carte_edit": ("Prix carte (€)", "prix_carte", "float"),
             "config_payment_url_edit": ("URL de paiement", "payment_url", "str"),
@@ -7708,6 +7730,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 current_value = get_config_value(key, "")
             elif key == "card_margin":
                 current_value = get_config_value(key, DEFAULT_CARD_MARGIN)
+            elif key == "argent_min":
+                current_value = get_config_value(key, DEFAULT_POINT_MIN)
+            elif key == "argent_max":
+                current_value = get_config_value(key, DEFAULT_POINT_MAX)
             else:
                 current_value = get_config_value(key, 150)
         elif value_type == "float":
@@ -7732,7 +7758,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Déterminer le menu de retour selon le type de config
         if key == "payment_url":
             back_callback = "config_payement"
-        elif key in ["point_min", "point_max"]:
+        elif key in ["point_min", "point_max", "argent_min", "argent_max"]:
             back_callback = "config_points"
         elif key in ["card_margin", "prix_carte"]:
             back_callback = "config_carte"
@@ -8085,7 +8111,7 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
             keyboard = [
                 [InlineKeyboardButton("📢 Annonces", callback_data="cmd_annonce")],
                 [InlineKeyboardButton("👤 Moi", callback_data="cmd_moi")],
-                [InlineKeyboardButton("💰 Acheter des points", callback_data="cmd_acheter_points")],
+                [InlineKeyboardButton("💰 Acheter de l'argent", callback_data="cmd_acheter_points")],
                 [InlineKeyboardButton("🛒 Boutique", callback_data="cmd_boutique")],
                 [InlineKeyboardButton("🔙 Retour", callback_data="menu_principal")]
             ]
@@ -8145,7 +8171,7 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
     try:
         _, payment_user_id, points, price, photo_file_id, created_at, status, confirmation_message_id = payment[:8]
         
-        logger.info(f"Envoi de la preuve de paiement à l'admin pour la transaction {payment_id} (user_id={user_id}, points={points}, price={price:.2f}€)")
+        logger.info(f"Envoi de la preuve de paiement à l'admin pour la transaction {payment_id} (user_id={user_id}, argent={points}, price={price:.2f}€)")
         
         # Récupérer la réduction de l'utilisateur pour afficher les détails
         user_reduction = get_user_reduction(payment_user_id)
@@ -8158,7 +8184,7 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
             "📸 **Nouvelle preuve de paiement reçue**\n",
             f"👤 Utilisateur: {escape_markdown(str(user.first_name or 'N/A'))} (@{escape_markdown(str(user.username or 'N/A'))})",
             f"🆔 ID: `{payment_user_id}`",
-            f"💰 Points: **{points}**"
+            f"💰 Argent: **{points}**"
         ]
         
         # Ajouter les informations de réduction si applicable
@@ -9039,7 +9065,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
             # Déterminer le menu de retour selon le type de config
             if key == "payment_url":
                 back_callback = "config_payement"
-            elif key in ["point_min", "point_max"]:
+            elif key in ["point_min", "point_max", "argent_min", "argent_max"]:
                 back_callback = "config_points"
             elif key == "card_margin":
                 back_callback = "config_carte"

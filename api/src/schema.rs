@@ -206,7 +206,7 @@ diesel::table! {
 diesel::table! {
     users (user_id) {
         user_id -> Int8,
-        points -> Int4,
+        points -> Numeric,
         #[max_length = 50]
         role -> Nullable<Varchar>,
         created_at -> Timestamp,

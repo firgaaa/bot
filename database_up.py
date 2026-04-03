@@ -71,6 +71,18 @@ def _get_env_config(key: str, empty_val: str) -> str:
     return (os.getenv(key) or empty_val).strip()
 
 
+def _get_env_config_multi(keys: list[str], empty_val: str) -> str:
+    """
+    Récupère la première variable non vide parmi plusieurs clés CONFIG_*.
+    Utile pour conserver une compatibilité de nommage lors des transitions.
+    """
+    for key in keys:
+        value = os.getenv(key)
+        if value is not None and str(value).strip() != "":
+            return str(value).strip()
+    return empty_val
+
+
 def _get_token_secret() -> bytes:
     """Secret pour dériver les tokens (identique à bot.py)."""
     secret = os.getenv("TOKEN_PUBLIC_SECRET") or os.getenv("BOT_TOKEN") or "default-secret"
@@ -350,8 +362,9 @@ def ensure_bot_tables() -> tuple[bool, str]:
             # Sync config depuis .env à chaque lancement (création si absent, remplissage si vide)
             now = datetime.now().isoformat()
             config_from_env = [
-                ("point_min", _get_env_config("CONFIG_POINT_MIN", "0")),
-                ("point_max", _get_env_config("CONFIG_POINT_MAX", "0")),
+                # Nommage courant: ARGENT_*. Compatibilité ascendante: POINT_*.
+                ("argent_min", _get_env_config_multi(["CONFIG_ARGENT_MIN", "CONFIG_POINT_MIN"], "0")),
+                ("argent_max", _get_env_config_multi(["CONFIG_ARGENT_MAX", "CONFIG_POINT_MAX"], "0")),
                 ("card_margin", _get_env_config("CONFIG_CARD_MARGIN", "0")),
                 ("prix_carte", _get_env_config("CONFIG_PRIX_CARTE", "0")),
                 ("payment_url", _get_env_config("CONFIG_PAYMENT_URL", "")),
@@ -382,6 +395,21 @@ def ensure_bot_tables() -> tuple[bool, str]:
             cur.execute("DELETE FROM config WHERE key = 'reduction_carte'")
             cur.execute("DELETE FROM config WHERE key = 'max_decouvert_argent'")
             cur.execute("DELETE FROM config WHERE key = 'staff_thread_report'")
+            # Migration compat: copier point_min/point_max -> argent_min/argent_max si besoin
+            cur.execute("""
+                INSERT INTO config (key, value, updated_at)
+                SELECT 'argent_min', value, CURRENT_TIMESTAMP
+                FROM config
+                WHERE key = 'point_min'
+                  AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'argent_min')
+            """)
+            cur.execute("""
+                INSERT INTO config (key, value, updated_at)
+                SELECT 'argent_max', value, CURRENT_TIMESTAMP
+                FROM config
+                WHERE key = 'point_max'
+                  AND NOT EXISTS (SELECT 1 FROM config WHERE key = 'argent_max')
+            """)
 
             conn.commit()
             print("  Config sync .env -> DB OK.")
