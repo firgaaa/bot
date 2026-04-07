@@ -237,6 +237,9 @@ POINTS_FORMULA_DEFAULTS: Final[Dict[str, int]] = {
     "revendeur": 100,
 }
 
+# Minimum de solde appliqué automatiquement aux revendeurs.
+DEFAULT_MINIMUM_ARGENT_SOLDE_VENDEUR: Final[float] = -30.0
+
 
 
 # Configuration PostgreSQL local
@@ -278,6 +281,7 @@ CONFIG_KEY_TO_ENV: Final[Dict[str, str]] = {
     "staff_thread_payment": "CONFIG_STAFF_THREAD_PAYMENT",
     "staff_thread_entretien": "CONFIG_STAFF_THREAD_ENTRETIEN",
     "staff_thread_demande_access": "CONFIG_STAFF_THREAD_DEMANDE_ACCESS",
+    "staff_thread_demande_vendeur": "CONFIG_STAFF_THREAD_DEMANDE_VENDEUR",
     "emergency_stop": "CONFIG_EMERGENCY_STOP",
     "announcement_text": "CONFIG_ANNOUNCEMENT_TEXT",
     "announcement_photo": "CONFIG_ANNOUNCEMENT_PHOTO",
@@ -510,7 +514,8 @@ def get_nouveau_user(user_id: int) -> Optional[tuple]:
 def create_or_update_demande_access(user_id: int, username: Optional[str]) -> bool:
     """
     Crée ou met à jour une demande d'accès : demande_en_attente=true, nb_tentatives+1, last_demande=now().
-    Retourne True en cas de succès.
+    Retourne True uniquement si une nouvelle demande a été créée/mise à jour.
+    Retourne False si une demande est déjà en attente (ou en cas d'erreur).
     """
     try:
         with get_db_connection() as conn:
@@ -524,11 +529,14 @@ def create_or_update_demande_access(user_id: int, username: Optional[str]) -> bo
                     demande_en_attente = true,
                     nb_tentatives = nouveau_user.nb_tentatives + 1,
                     last_demande = CURRENT_TIMESTAMP
+                WHERE nouveau_user.demande_en_attente = false
+                RETURNING user_id
                 """,
                 (user_id, username),
             )
+            inserted_or_updated = cursor.fetchone() is not None
             conn.commit()
-            return True
+            return inserted_or_updated
     except psycopg2.Error as e:
         logger.error(f"Erreur create_or_update_demande_access {user_id}: {e}")
         return False
@@ -560,6 +568,122 @@ def set_demande_refuse(user_id: int) -> None:
             conn.commit()
     except psycopg2.Error as e:
         logger.error(f"Erreur set_demande_refuse {user_id}: {e}")
+
+
+def get_pending_vendeur_request(user_id: int) -> Optional[tuple]:
+    """Retourne la demande vendeur en attente pour un user (ou None)."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, user_id, username, first_name, status, nb_tentatives, created_at
+                FROM vendeur_requests
+                WHERE user_id = %s AND status = 'pending'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            return row if row else None
+    except psycopg2.Error as e:
+        logger.error(f"Erreur get_pending_vendeur_request {user_id}: {e}")
+        return None
+
+
+def create_vendeur_request(user_id: int, username: Optional[str], first_name: Optional[str]) -> Optional[tuple[int, int]]:
+    """
+    Crée une nouvelle demande vendeur.
+    Retourne (request_id, tentative) en cas de succès, None si déjà en attente ou erreur.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id
+                FROM vendeur_requests
+                WHERE user_id = %s AND status = 'pending'
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            if cursor.fetchone():
+                return None
+
+            cursor.execute(
+                "SELECT COALESCE(MAX(nb_tentatives), 0) + 1 FROM vendeur_requests WHERE user_id = %s",
+                (user_id,),
+            )
+            tentative = int(cursor.fetchone()[0] or 1)
+            cursor.execute(
+                """
+                INSERT INTO vendeur_requests (user_id, username, first_name, status, nb_tentatives)
+                VALUES (%s, %s, %s, 'pending', %s)
+                RETURNING id
+                """,
+                (user_id, username, first_name, tentative),
+            )
+            request_id = int(cursor.fetchone()[0])
+            conn.commit()
+            return request_id, tentative
+    except psycopg2.IntegrityError:
+        return None
+    except psycopg2.Error as e:
+        logger.error(f"Erreur create_vendeur_request {user_id}: {e}")
+        return None
+
+
+def get_vendeur_request_by_id(request_id: int) -> Optional[tuple]:
+    """
+    Récupère une demande vendeur par id.
+    Retourne (id, user_id, username, first_name, status, nb_tentatives, created_at, updated_at) ou None.
+    """
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT id, user_id, username, first_name, status, nb_tentatives, created_at, updated_at
+                FROM vendeur_requests
+                WHERE id = %s
+                """,
+                (request_id,),
+            )
+            row = cursor.fetchone()
+            return row if row else None
+    except psycopg2.Error as e:
+        logger.error(f"Erreur get_vendeur_request_by_id {request_id}: {e}")
+        return None
+
+
+def set_vendeur_request_status(request_id: int, status: str, reviewed_by: Optional[int]) -> bool:
+    """Passe une demande vendeur pending -> accepted/refused et journalise l'admin ayant traité."""
+    if status not in {"accepted", "refused"}:
+        return False
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE vendeur_requests
+                SET status = %s,
+                    reviewed_by = %s,
+                    reviewed_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s AND status = 'pending'
+                """,
+                (status, reviewed_by, request_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+    except psycopg2.Error as e:
+        logger.error(f"Erreur set_vendeur_request_status {request_id}: {e}")
+        return False
+
+
+def get_total_users() -> int:
     """Récupère le nombre total d'utilisateurs"""
     try:
         with get_db_connection() as conn:
@@ -708,6 +832,19 @@ def get_user_balance(user_id: int) -> float:
     return get_user_points(user_id)
 
 
+def get_user_minimum_argent_solde(user_id: int) -> float:
+    """Récupère le minimum de solde autorisé pour un utilisateur."""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COALESCE(minimum_argent_solde, 0) FROM users WHERE user_id = %s", (user_id,))
+            result = cursor.fetchone()
+            return float(result[0]) if result else 0.0
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de la récupération du minimum de solde pour {user_id}: {e}")
+        return 0.0
+
+
 def deduct_user_balance_atomic(user_id: int, points_to_deduct: float) -> bool:
     """
     Déduit de l'argent du solde utilisateur de manière atomique.
@@ -727,6 +864,54 @@ def deduct_user_balance_atomic(user_id: int, points_to_deduct: float) -> bool:
         return True
     except psycopg2.Error as e:
         logger.error(f"Erreur lors de la déduction du solde pour l'utilisateur {user_id}: {e}")
+        return False
+
+
+def deduct_user_balance_with_floor_atomic(user_id: int, points_to_deduct: float, min_allowed_balance: float) -> bool:
+    """
+    Déduit de l'argent avec un plancher personnalisé.
+    Exemple: min_allowed_balance=-30 autorise un découvert jusqu'à -30.
+    """
+    try:
+        amount = float(points_to_deduct)
+        floor = float(min_allowed_balance)
+        if amount <= 0:
+            logger.warning(f"Tentative de déduction d'argent négative ou nulle: {points_to_deduct}")
+            return False
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT points FROM users WHERE user_id = %s FOR UPDATE",
+                (user_id,),
+            )
+            result = cursor.fetchone()
+            if not result:
+                logger.warning(f"Tentative de déduction avec plancher pour un utilisateur inexistant: {user_id}")
+                return False
+
+            current_points = float(result[0] or 0.0)
+            new_points = current_points - amount
+            if new_points < floor:
+                logger.warning(
+                    f"Déduction refusée pour {user_id}: {current_points} - {amount} = {new_points} < plancher {floor}"
+                )
+                return False
+
+            cursor.execute(
+                "UPDATE users SET points = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
+                (new_points, user_id),
+            )
+            if cursor.rowcount == 0:
+                return False
+
+            logger.info(
+                f"Solde mis à jour avec plancher pour {user_id}: "
+                f"{current_points} -> {new_points} (plancher {floor})"
+            )
+            return True
+    except psycopg2.Error as e:
+        logger.error(f"Erreur lors de la déduction avec plancher pour l'utilisateur {user_id}: {e}")
         return False
 
 
@@ -1604,7 +1789,7 @@ def update_config_value(key: str, value: any) -> bool:
                     logger.warning(f"ID de thread invalide (doit être un nombre): {value_str}")
                     return False
             value = value_str
-        elif key == "staff_thread_demande_access":
+        elif key in {"staff_thread_demande_access", "staff_thread_demande_vendeur"}:
             value_str = str(value).strip()
             if value_str:
                 try:
@@ -1855,6 +2040,17 @@ def get_staff_thread_entretien() -> Optional[int]:
 def get_staff_thread_demande_access() -> Optional[int]:
     """Récupère l'ID du thread des demandes d'accès dans le canal staff."""
     thread_id = _get_cached_config("staff_thread_demande_access", "")
+    if thread_id:
+        try:
+            return int(thread_id)
+        except ValueError:
+            return None
+    return None
+
+
+def get_staff_thread_demande_vendeur() -> Optional[int]:
+    """Récupère l'ID du thread des demandes revendeur dans le canal staff."""
+    thread_id = _get_cached_config("staff_thread_demande_vendeur", "")
     if thread_id:
         try:
             return int(thread_id)
@@ -2711,6 +2907,7 @@ def set_user_role(user_id: int, role: str) -> bool:
         return False
     
     try:
+        minimum_solde = DEFAULT_MINIMUM_ARGENT_SOLDE_VENDEUR if role == "vendeur" else 0.0
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # S'assurer que l'utilisateur existe dans la DB
@@ -2718,13 +2915,20 @@ def set_user_role(user_id: int, role: str) -> bool:
             if not cursor.fetchone():
                 # Créer l'utilisateur s'il n'existe pas
                 cursor.execute(
-                    "INSERT INTO users (user_id, points, role) VALUES (%s, 0, %s) ON CONFLICT (user_id) DO UPDATE SET role = %s, updated_at = CURRENT_TIMESTAMP",
-                    (user_id, role, role)
+                    """
+                    INSERT INTO users (user_id, points, role, minimum_argent_solde)
+                    VALUES (%s, 0, %s, %s)
+                    ON CONFLICT (user_id) DO UPDATE SET
+                        role = EXCLUDED.role,
+                        minimum_argent_solde = EXCLUDED.minimum_argent_solde,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (user_id, role, minimum_solde),
                 )
             else:
                 cursor.execute(
-                    "UPDATE users SET role = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
-                    (role, user_id)
+                    "UPDATE users SET role = %s, minimum_argent_solde = %s, updated_at = CURRENT_TIMESTAMP WHERE user_id = %s",
+                    (role, minimum_solde, user_id),
                 )
             return True
     except psycopg2.Error as e:
@@ -2803,7 +3007,7 @@ def get_users_by_role(role: str) -> list[tuple[int, int]]:
 
 
 def get_users_with_reduction() -> list[tuple[int, float, str]]:
-    """Récupère la liste des utilisateurs avec une réduction > 0 (retourne [(user_id, reduction, role), ...])"""
+    """Utilisateurs avec réduction Click&Collect > 0 : [(user_id, reduction %, role), ...]."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -2819,8 +3023,27 @@ def get_users_with_reduction() -> list[tuple[int, float, str]]:
         return []
 
 
+def click_collect_cart_total_brut_argent(cart_list: Optional[list]) -> float:
+    """Somme catalogue (prix × qty) du panier Click&Collect, avant réduction utilisateur."""
+    total = 0.0
+    for e in cart_list or []:
+        raw_price = e.get("price")
+        if raw_price is None:
+            raw_price = get_product_price(str(e.get("id", "")))
+        try:
+            unit_price = float(raw_price)
+        except (TypeError, ValueError):
+            unit_price = 0.0
+        try:
+            qty = int(e.get("quantity", 1))
+        except (TypeError, ValueError):
+            qty = 1
+        total += unit_price * max(1, qty)
+    return total
+
+
 def get_user_reduction(user_id: int) -> float:
-    """Récupère le taux de réduction d'un utilisateur (0-100, 2 décimales)"""
+    """Récupère le % de réduction Click&Collect (0–100) : coef sur le total panier (1 - r/100)."""
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -2836,8 +3059,19 @@ def get_user_reduction(user_id: int) -> float:
         return 0.0
 
 
+def click_collect_cart_total_facturé_argent(user_id: int, cart_list: Optional[list]) -> float:
+    """
+    Montant argent réellement débité pour le panier Click&Collect.
+    total_facturé = total_brut × (1 - reduction/100), reduction en % (0–100).
+    """
+    brut = click_collect_cart_total_brut_argent(cart_list)
+    r = get_user_reduction(user_id)
+    factor = max(0.0, 1.0 - float(r) / 100.0)
+    return round(brut * factor, 2)
+
+
 def set_user_reduction(user_id: int, reduction: float) -> bool:
-    """Définit le taux de réduction d'un utilisateur (0-100, 2 décimales)"""
+    """Définit le % de réduction Click&Collect (0–100, 2 décimales) pour l'utilisateur."""
     if reduction < 0 or reduction > 100:
         logger.warning(f"Tentative de définir une réduction invalide: {reduction}")
         return False
@@ -2954,7 +3188,9 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "config_payment_url_edit",
         "config_staff_channel_edit",
         "config_staff_thread_payment_edit",
+        "config_staff_thread_entretien_edit",
         "config_staff_thread_demande_access_edit",
+        "config_staff_thread_demande_vendeur_edit",
         "config_annonce_text_edit",
         "config_annonce_photo_edit",
         "config_annonce_photo_delete",
@@ -2977,12 +3213,22 @@ def validate_callback_data(callback_data: Optional[str]) -> bool:
         "user_list_page",
         "admin_create_account",
         "demande_access_send",
+        "vendeur_request_page",
+        "vendeur_request_send",
     }
     
     if callback_data.startswith("demande_accept_") or callback_data.startswith("demande_refuse_"):
         try:
             uid = int(callback_data.split("_")[-1])
             if uid > 0:
+                return True
+        except (ValueError, IndexError):
+            return False
+
+    if callback_data.startswith("vendeur_demande_accept_") or callback_data.startswith("vendeur_demande_refuse_"):
+        try:
+            request_id = int(callback_data.split("_")[-1])
+            if request_id > 0:
                 return True
         except (ValueError, IndexError):
             return False
@@ -3455,12 +3701,15 @@ def require_role_for_callback(role: str, callback_data: str) -> bool:
         "config_staff_thread_payment_edit",
         "config_staff_thread_entretien_edit",
         "config_staff_thread_demande_access_edit",
+        "config_staff_thread_demande_vendeur_edit",
     }
     admin_only_prefixes = (
         "payment_accept_",
         "payment_refuse_",
         "demande_accept_",
         "demande_refuse_",
+        "vendeur_demande_accept_",
+        "vendeur_demande_refuse_",
     )
 
     if callback_data in admin_only_exact or callback_data.startswith(admin_only_prefixes):
@@ -4066,6 +4315,7 @@ async def _do_recup_token_and_session(
     email = card.get("email") or ""
     numero = card.get("numero") or ""
     ddb = card.get("ddb") or ""
+    bearer_token = card.get("bearer_token") or card.get("bearerToken") or ""
 
     if USE_TEST_CLICK_ACCOUNT:
         # Phase de test : on bypasse recup_token et on utilise un compte fixe
@@ -4097,6 +4347,7 @@ async def _do_recup_token_and_session(
             email=str(email),
             numero=str(numero),
             ddb=str(ddb),
+            bearer_token=str(bearer_token),
         )
 
         if result[0] != "success":
@@ -4190,23 +4441,12 @@ async def _do_recup_token_and_session(
             await update_or_none.message.reply_text(f"{header}\n\n{escape_html(err_submit or 'Erreur inconnue')}", reply_markup=reply_markup, parse_mode="HTML")
         return
 
-    # Débit local du solde utilisateur (argent consommé par le panier)
+    # Débit local du solde utilisateur (argent après réduction Click sur le total panier)
     try:
-        total_argent = 0.0
-        for e in cart_list:
-            raw_price = e.get("price", get_product_price(str(e.get("id", ""))))
-            try:
-                unit_price = float(raw_price)
-            except (TypeError, ValueError):
-                unit_price = 0.0
-            try:
-                qty = int(e.get("quantity", 1))
-            except (TypeError, ValueError):
-                qty = 1
-            total_argent += unit_price * max(1, qty)
-        if total_argent > 0:
-            debit_amount = total_argent
-            ok_debit = update_user_points(user_id, -debit_amount)
+        debit_amount = click_collect_cart_total_facturé_argent(user_id, cart_list)
+        if debit_amount > 0:
+            min_balance_allowed = get_user_minimum_argent_solde(user_id)
+            ok_debit = deduct_user_balance_with_floor_atomic(user_id, debit_amount, min_balance_allowed)
             if not ok_debit:
                 logger.warning(
                     f"Échec du débit local de {debit_amount} argent pour l'utilisateur {user_id} "
@@ -4220,6 +4460,7 @@ async def _do_recup_token_and_session(
 
     role_for_submit = get_effective_role(user_id, context)
     conf_url = (data_submit or {}).get("confirmation_url") if data_submit else None
+    secondary_token = (data_submit or {}).get("secondary_token") if data_submit else None
     first_name = (data_submit or {}).get("first_name") if data_submit else None
     last_name = (data_submit or {}).get("last_name") if data_submit else None
     order_number = (data_submit or {}).get("order_number") if data_submit else None
@@ -4238,6 +4479,7 @@ async def _do_recup_token_and_session(
     store_name_display = escape_html(str(store_name)) if store_name else "—"
     store_city_display = escape_html(str(store_city)) if store_city else "—"
     context.user_data["click_collect_last_submit_info"] = data_submit
+    context.user_data["click_collect_secondary_token"] = secondary_token
     header = format_header_rich("COMMANDE TERMINÉE", "✅", "success", banner=False)
     msg = (
         f"\n"
@@ -4359,7 +4601,8 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         ]
     else:
         keyboard = [
-            [InlineKeyboardButton("🛒 Shop", callback_data="cmd_shop")]
+            [InlineKeyboardButton("🛒 Shop", callback_data="cmd_shop")],
+            [InlineKeyboardButton("💼 Devenir vendeur", callback_data="vendeur_request_page")]
         ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -4567,6 +4810,32 @@ async def _show_demande_access_page(update: Update, user_id: int, user) -> None:
         logger.error(f"Erreur envoi page demande accès: {e}")
 
 
+async def _show_vendeur_request_page(query, user_id: int) -> None:
+    """Affiche la page de demande revendeur (1 seule demande en attente autorisée)."""
+    pending = get_pending_vendeur_request(user_id)
+    header = format_header_rich("DEVENIR VENDEUR", "💼", "orange", banner=False)
+    msg = (
+        f"{header}\n\n"
+        "Voulez-vous envoyer une demande d'admission comme revendeur pour le bot ?"
+    )
+    if pending:
+        msg += (
+            "\n\n⏳ <b>Une demande est déjà en cours.</b>\n"
+            "Attendez la réponse d'un administrateur avant d'en envoyer une nouvelle."
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Revenir à l'accueil", callback_data="cmd_start")]]
+    else:
+        keyboard = [
+            [InlineKeyboardButton("📩 Envoyer ma demande", callback_data="vendeur_request_send")],
+            [InlineKeyboardButton("🔙 Revenir à l'accueil", callback_data="cmd_start")],
+        ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    try:
+        await safe_edit_message_text(query, msg, reply_markup, "HTML")
+    except TelegramError as e:
+        logger.error(f"Erreur affichage page demande vendeur: {e}")
+
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Gère la commande /start"""
     if not update.message or not update.effective_user:
@@ -4607,7 +4876,6 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         first_name = escape_html(sanitize_text(user.first_name, 64)) if user.first_name else "Utilisateur"
         
         # Construire le message avec le nouveau système esthétique
-        header = format_header_rich("BOT KFC", "🍗", "orange", banner=False)
         welcome_section = format_section_rich(
             f"Salut {first_name} !",
             "Bienvenue sur le bot KFC.",
@@ -4619,7 +4887,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         if USE_TEST_CLICK_ACCOUNT:
             footer += "\n\n<b>[Mode test Click&Collect]</b> – les commandes Click&Collect utilisent un compte fidélité de test."
         
-        welcome_message = f"{header}\n\n{welcome_section}\n\n{footer}"
+        welcome_message = f"{welcome_section}\n\n{footer}"
         keyboard = [[InlineKeyboardButton("🛒 Accéder au Shop", callback_data="cmd_shop")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -4777,8 +5045,30 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if user_exists_in_users(user_id):
             await show_main_menu(update, context)
             return
+        row_existing = get_nouveau_user(user_id)
+        if row_existing and bool(row_existing[1]):
+            try:
+                await query.edit_message_text(
+                    "⏳ <b>Demande déjà en attente.</b>\n\n"
+                    "Votre demande a déjà été transmise aux administrateurs.",
+                    parse_mode="HTML",
+                )
+            except TelegramError:
+                pass
+            return
         username = user.username if user.username else None
         if not create_or_update_demande_access(user_id, username):
+            row_after_fail = get_nouveau_user(user_id)
+            if row_after_fail and bool(row_after_fail[1]):
+                try:
+                    await query.edit_message_text(
+                        "⏳ <b>Demande déjà en attente.</b>\n\n"
+                        "Votre demande a déjà été transmise aux administrateurs.",
+                        parse_mode="HTML",
+                    )
+                except TelegramError:
+                    pass
+                return
             try:
                 await query.edit_message_text("❌ Erreur lors de l'envoi de la demande.")
             except TelegramError:
@@ -4812,6 +5102,85 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except TelegramError:
             pass
         logger.info(f"Demande d'accès envoyée par user_id={user_id} vers thread={thread_id}")
+        return
+
+    if callback_data == "vendeur_request_page":
+        if role == "vendeur":
+            try:
+                await query.edit_message_text(
+                    "✅ Vous avez déjà le rôle vendeur.",
+                    reply_markup=create_back_button()
+                )
+            except TelegramError:
+                pass
+            return
+        await _show_vendeur_request_page(query, user_id)
+        return
+
+    if callback_data == "vendeur_request_send":
+        if role == "vendeur":
+            try:
+                await query.edit_message_text(
+                    "✅ Vous avez déjà le rôle vendeur.",
+                    reply_markup=create_back_button()
+                )
+            except TelegramError:
+                pass
+            return
+
+        if get_pending_vendeur_request(user_id):
+            await _show_vendeur_request_page(query, user_id)
+            return
+
+        username = user.username if user.username else None
+        first_name_raw = user.first_name if user.first_name else None
+        created = create_vendeur_request(user_id, username, first_name_raw)
+        if not created:
+            try:
+                await query.edit_message_text(
+                    "❌ Impossible d'envoyer la demande pour le moment. Vérifiez qu'aucune demande n'est déjà en cours.",
+                    reply_markup=create_back_button()
+                )
+            except TelegramError:
+                pass
+            return
+
+        request_id, tentative = created
+        thread_id = get_staff_thread_demande_vendeur()
+        username_html = f"@{escape_html(username)}" if username else "—"
+        first_name_html = escape_html((first_name_raw or "N/A")[:64])
+        role_html = escape_html(role)
+        staff_msg = (
+            "💼 <b>Demande revendeur</b>\n\n"
+            f"🆔 Demande ID: <code>{request_id}</code>\n"
+            f"👤 User ID: <code>{user_id}</code>\n"
+            f"📱 Username: {username_html}\n"
+            f"📛 Prénom: {first_name_html}\n"
+            f"🎭 Rôle actuel: <b>{role_html}</b>\n"
+            f"📊 Tentative n°{tentative}"
+        )
+        reply_markup = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✅ Accepter", callback_data=f"vendeur_demande_accept_{request_id}"),
+                InlineKeyboardButton("❌ Refuser", callback_data=f"vendeur_demande_refuse_{request_id}"),
+            ]
+        ])
+        await send_to_staff_channel(
+            context.bot,
+            staff_msg,
+            thread_id=thread_id,
+            reply_markup=reply_markup,
+            parse_mode="HTML",
+        )
+        try:
+            await query.edit_message_text(
+                "✅ Votre demande a bien été transmise aux administrateurs.\n"
+                "Nous analysons la requête puis nous vous recontacterons pour une réponse.",
+                parse_mode="HTML",
+            )
+        except TelegramError:
+            pass
+        logger.info(f"Demande revendeur envoyée: request_id={request_id}, user_id={user_id}, thread={thread_id}")
         return
 
     # Gestion du stock (affichage des statistiques)
@@ -4914,22 +5283,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return list(cart) if isinstance(cart, list) else list((cart or {}).values())
 
     def _cart_total_argent(cart_list: list) -> float:
-        """Total utilisateur (argent) calculé depuis le champ price des lignes panier."""
-        total = 0.0
-        for e in cart_list or []:
-            raw_price = e.get("price")
-            if raw_price is None:
-                raw_price = get_product_price(str(e.get("id", "")))
-            try:
-                unit_price = float(raw_price)
-            except (TypeError, ValueError):
-                unit_price = 0.0
-            try:
-                qty = int(e.get("quantity", 1))
-            except (TypeError, ValueError):
-                qty = 1
-            total += unit_price * max(1, qty)
-        return total
+        """Total catalogue (argent) avant réduction Click — pour affichage / cohérence avec PRODUCT."""
+        return click_collect_cart_total_brut_argent(cart_list)
 
     def _render_article_page(cat_idx: int, art_idx: int):
         """Affiche l'écran article paginé (cat_idx, art_idx). Retourne (header, msg, reply_markup) ou None."""
@@ -4947,24 +5302,37 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         qty = sum(e.get("quantity", 1) for e in cart_list if str(e.get("id", "")) == loyalty_id)
         display_name = sanitize_display_name(product_data.get("name", "Produit inconnu"))
         display_price = product_data.get("price", "-")
-        total_argent = _cart_total_argent(cart_list)
+        total_brut = _cart_total_argent(cart_list)
+        total_facturé = click_collect_cart_total_facturé_argent(user_id, cart_list)
+        r_click = get_user_reduction(user_id)
         cat_name = cat_names[cat_idx]
         panier_ref = context.user_data.get('click_collect_panier_id', '')
         header = format_header_rich(cat_name, "🍗", "orange", banner=False)
         msg = ""
         #if panier_ref:
         #    msg += f"🔢 Réf. panier : <code>{escape_html(panier_ref)}</code>\n\n"
+        total_panier_lines = f"• Total panier (catalogue) : {total_brut:.2f} argent\n"
+        if r_click > 0:
+            total_panier_lines += (
+                f"• Réduction Click {r_click:.2f}% → à payer : <b>{total_facturé:.2f}</b> argent\n"
+            )
+        else:
+            total_panier_lines += f"• À payer : <b>{total_facturé:.2f}</b> argent\n"
         msg += (
             f"——————————————————\n"
             f"<b>{escape_html(display_name)}</b>\n"
-            f"PRIX : {escape_html(str(display_price))} euro\n\n\n\n"
+            f"PRIX : {escape_html(str(display_price))}€ \n\n\n\n"
             f"• Dans le panier : {qty}\n"
-            f"• Total panier : {total_argent:.2f} argent\n"
+            f"{total_panier_lines}"
             f"{art_idx + 1}/{len(items)}"
         )
         if item.get("unknown_product"):
             msg += "\n\n⚠️ Produit inconnu (API Click). Ajout au panier désactivé."
         keyboard = [
+            [
+                InlineKeyboardButton("Retour", callback_data="click_collect_back_cats"),
+                InlineKeyboardButton("Panier", callback_data="click_collect_panier"),
+            ],
             [
                 InlineKeyboardButton("⬅ Precedant", callback_data=f"click_collect_art_prev_{cat_idx}_{art_idx}"),
                 InlineKeyboardButton("Suivant ➡", callback_data=f"click_collect_art_next_{cat_idx}_{art_idx}"),
@@ -4972,10 +5340,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             [
                 InlineKeyboardButton("➖", callback_data=f"click_collect_art_minus_{cat_idx}_{art_idx}"),
                 InlineKeyboardButton("➕", callback_data=f"click_collect_art_plus_{cat_idx}_{art_idx}"),
-            ],
-            [
-                InlineKeyboardButton("Retour", callback_data="click_collect_back_cats"),
-                InlineKeyboardButton("Panier", callback_data="click_collect_panier"),
             ],
         ]
         return header, msg, InlineKeyboardMarkup(keyboard)
@@ -5311,7 +5675,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not store or not store.get("id"):
             await query.answer("❌ Sélectionnez d'abord un KFC.", show_alert=True)
             return
-        total_argent = _cart_total_argent(cart_list)
+        total_brut = _cart_total_argent(cart_list)
+        total_facturé = click_collect_cart_total_facturé_argent(user_id, cart_list)
+        r_click = get_user_reduction(user_id)
         header = format_header_rich("PANIER", "🛒", "orange", banner=False)
         store_name = store.get("name", "?")
         panier_ref = context.user_data.get('click_collect_panier_id', '')
@@ -5322,14 +5688,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not cart_list:
             msg += "Votre panier est vide.\n\nAjoutez des articles en parcourant les catégories."
         else:
-            msg += f"{len(cart_list)} article(s) • {total_argent:.2f} argent\n--------------------------------\n\n"
+            if r_click > 0:
+                msg += (
+                    f"{len(cart_list)} article(s) • catalogue {total_brut:.2f} argent → "
+                    f"<b>à payer {total_facturé:.2f}</b> (réduction Click {r_click:.2f}%)\n"
+                    f"--------------------------------\n\n"
+                )
+            else:
+                msg += f"{len(cart_list)} article(s) • <b>à payer {total_facturé:.2f}</b> argent\n--------------------------------\n\n"
             for e in cart_list[:15]:
                 line_price = e.get("price", get_product_price(str(e.get("id", ""))))
                 try:
                     line_price_float = float(line_price)
                 except (TypeError, ValueError):
                     line_price_float = 0.0
-                msg += f"• {escape_html(sanitize_display_name(e.get('name', '?')))} x{e.get('quantity', 1)} — {line_price_float:.2f} euro\n"
+                msg += f"• {escape_html(sanitize_display_name(e.get('name', '?')))} x{e.get('quantity', 1)} — {line_price_float:.2f}€\n"
             if len(cart_list) > 15:
                 msg += f"... et {len(cart_list) - 15} autre(s)"
         keyboard = []
@@ -5777,14 +6150,28 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not store or not store.get("id"):
             await query.answer("❌ Erreur : restaurant non sélectionné.", show_alert=True)
             return
-        total_argent = _cart_total_argent(cart_list)
-        # Vérification du solde local avant confirmation définitive
+        total_brut = _cart_total_argent(cart_list)
+        total_facturé = click_collect_cart_total_facturé_argent(user_id, cart_list)
+        r_click = get_user_reduction(user_id)
+        # Vérification du solde local avant confirmation définitive (montant après réduction Click)
         user_balance = get_user_balance(user_id)
-        if user_balance < total_argent:
+        min_balance_allowed = get_user_minimum_argent_solde(user_id)
+        projected_balance = float(user_balance) - float(total_facturé)
+        if projected_balance < min_balance_allowed:
             header = format_header_rich("ARGENT INSUFFISANT", "⚠️", "orange", banner=False)
+            montant_txt = (
+                f"<b>{total_facturé:.2f} argent</b> à débiter"
+                + (
+                    f" (catalogue {total_brut:.2f}, réduction Click {r_click:.2f}%)"
+                    if r_click > 0
+                    else ""
+                )
+            )
             msg = (
-                f"Votre panier contient <b>{total_argent:.2f} euro</b>, mais votre solde actuel est de "
+                f"Votre commande coûtera {montant_txt}. Votre solde actuel est "
                 f"<b>{float(user_balance):.2f} argent</b>.\n\n"
+                f"Votre minimum autorisé est <b>{min_balance_allowed:.2f} argent</b>.\n"
+                f"Solde projeté après commande : <b>{projected_balance:.2f} argent</b>.\n\n"
                 "Rechargez votre solde en achetant de l'argent, ou réduisez le contenu du panier."
             )
             keyboard = [
@@ -5812,8 +6199,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if len(cart_list) > 10:
             cart_preview += f"\n... et {len(cart_list) - 10} autre(s)"
         header = format_header_rich("CHOIX DÉFINITIF ?", "⚠️", "orange", banner=False)
+        recap_total = (
+            f"{total_facturé:.2f} argent à débiter"
+            + (
+                f" (catalogue {total_brut:.2f}, réduction Click {r_click:.2f}%)"
+                if r_click > 0
+                else ""
+            )
+        )
         msg = (
-            f"<b>Votre panier ({len(cart_list)} article(s), {total_argent:.2f} euro) :</b>\n{cart_preview}\n\n"
+            f"<b>Votre panier ({len(cart_list)} article(s)) — {recap_total} :</b>\n{cart_preview}\n\n"
             "Êtes-vous sûr ? Le choix est définitif."
         )
         keyboard = [
@@ -5900,14 +6295,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             except TelegramError:
                 pass
             return
-        # Débit local du solde utilisateur (argent consommé par le panier)
+        # Débit local du solde utilisateur (argent après réduction Click sur le total panier)
         try:
             cart = context.user_data.get('click_collect_cart', [])
             cart_list = cart if isinstance(cart, list) else list((cart or {}).values())
-            total_argent = _cart_total_argent(cart_list)
-            if total_argent > 0:
-                debit_amount = total_argent
-                ok_debit = update_user_points(user_id, -debit_amount)
+            debit_amount = click_collect_cart_total_facturé_argent(user_id, cart_list)
+            if debit_amount > 0:
+                min_balance_allowed = get_user_minimum_argent_solde(user_id)
+                ok_debit = deduct_user_balance_with_floor_atomic(user_id, debit_amount, min_balance_allowed)
                 if not ok_debit:
                     logger.warning(
                         f"Échec du débit local de {debit_amount} argent pour l'utilisateur {user_id} "
@@ -5919,6 +6314,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 f"après submit Click&Collect (panier_id={panier_id}): {e}"
             )
         conf_url = (data_submit or {}).get("confirmation_url") if data_submit else None
+        secondary_token = (data_submit or {}).get("secondary_token") if data_submit else None
         first_name = (data_submit or {}).get("first_name") if data_submit else None
         last_name = (data_submit or {}).get("last_name") if data_submit else None
         order_number = (data_submit or {}).get("order_number") if data_submit else None
@@ -5937,6 +6333,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         store_name_display = escape_html(str(store_name)) if store_name else "—"
         store_city_display = escape_html(str(store_city)) if store_city else "—"
         context.user_data["click_collect_last_submit_info"] = data_submit
+        context.user_data["click_collect_secondary_token"] = secondary_token
         header = format_header_rich("COMMANDE TERMINÉE", "✅", "success", banner=False)
         msg = (
             f"\n"
@@ -6571,10 +6968,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         keyboard = [
             [InlineKeyboardButton("📋 Liste des Vendeurs", callback_data="role_list_vendeur")],
             [InlineKeyboardButton("📋 Liste des Modérateurs", callback_data="role_list_moderator")],
-            [InlineKeyboardButton("💰 Liste des personnes avec réduction", callback_data="role_list_reduction")],
+            [InlineKeyboardButton("💰 Réduction Click (liste)", callback_data="role_list_reduction")],
             [InlineKeyboardButton("➕ Ajouter un rôle", callback_data="role_add_select")],
             [InlineKeyboardButton("➖ Retirer un rôle", callback_data="role_remove_select")],
-            [InlineKeyboardButton("💰 Modifier Réduction", callback_data="role_reduction_edit")],
+            [InlineKeyboardButton("💰 Modifier réduction Click", callback_data="role_reduction_edit")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_config")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -6613,9 +7010,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         users = get_users_with_reduction()
         
         if not users:
-            message = "💰 **Liste des personnes avec réduction**\n\nAucune personne avec réduction trouvée."
+            message = "💰 **Réduction Click — liste**\n\nAucun utilisateur avec réduction > 0 %."
         else:
-            message = "💰 **Liste des personnes avec réduction**\n\n"
+            message = "💰 **Réduction Click — liste**\n\n"
             # Limiter à 50 utilisateurs pour éviter les messages trop longs
             for idx, (uid, reduction_rate, user_role) in enumerate(users[:50], 1):
                 role_display = user_role.capitalize()
@@ -6661,7 +7058,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if callback_data == "role_reduction_edit" and role == "admin":
         context.user_data['reduction_edit_mode'] = True
         message = (
-            "💰 **Modifier la Réduction d'un Utilisateur**\n\n"
+            "💰 **Modifier la réduction Click d'un utilisateur**\n\n"
+            "Pourcentage (0–100) appliqué au total panier : facturé = catalogue × (1 − %/100).\n\n"
             "📝 Envoyez l'ID de l'utilisateur (uniquement le nombre).\n\n"
             "💡 Pour obtenir l'ID d'un utilisateur, vous pouvez demander à la personne d'utiliser le bot @userinfobot ou vérifier dans les logs."
         )
@@ -6682,7 +7080,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 await query.edit_message_text(
                     f"✅ **Vendeur configuré !**\n\n"
                     f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **0%**",
+                    f"💰 Réduction Click: **0%**",
                     parse_mode="Markdown"
                 )
                 logger.info(f"Réduction définie à 0% pour le nouveau vendeur {user_id_vendeur} par l'admin {user_id}")
@@ -6910,13 +7308,16 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         staff_thread_entretien_str = str(staff_thread_entretien) if staff_thread_entretien else "Non configuré"
         staff_thread_demande_access = get_staff_thread_demande_access()
         staff_thread_demande_access_str = str(staff_thread_demande_access) if staff_thread_demande_access else "Non configuré"
+        staff_thread_demande_vendeur = get_staff_thread_demande_vendeur()
+        staff_thread_demande_vendeur_str = str(staff_thread_demande_vendeur) if staff_thread_demande_vendeur else "Non configuré"
 
         message = (
             "📢 **Configuration du Canal Staff**\n\n"
             f"📢 Canal Staff: `{staff_channel}`\n"
             f"🧵 Thread Paiement: `{staff_thread_payment_str}`\n"
             f"🔧 Thread Entretien: `{staff_thread_entretien_str}`\n"
-            f"🔐 Thread Demande d'accès: `{staff_thread_demande_access_str}`\n\n"
+            f"🔐 Thread Demande d'accès: `{staff_thread_demande_access_str}`\n"
+            f"💼 Thread Demande vendeur: `{staff_thread_demande_vendeur_str}`\n\n"
             "Sélectionnez un paramètre à modifier :"
         )
         keyboard = [
@@ -6924,6 +7325,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             [InlineKeyboardButton("🧵 Modifier le Thread Paiement", callback_data="config_staff_thread_payment_edit")],
             [InlineKeyboardButton("🔧 Modifier le Thread Entretien", callback_data="config_staff_thread_entretien_edit")],
             [InlineKeyboardButton("🔐 Modifier le Thread Demande d'accès", callback_data="config_staff_thread_demande_access_edit")],
+            [InlineKeyboardButton("💼 Modifier le Thread Demande vendeur", callback_data="config_staff_thread_demande_vendeur_edit")],
             [InlineKeyboardButton("🔙 Retour", callback_data="cmd_config")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -7648,6 +8050,112 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             logger.info(f"Demande d'accès refusée pour user_id={target_uid} par admin {user_id}")
         return
 
+    if callback_data.startswith("vendeur_demande_accept_") and role == "admin":
+        try:
+            request_id = int(callback_data.split("_")[-1])
+        except (ValueError, IndexError):
+            request_id = None
+        if not request_id:
+            return
+
+        req = get_vendeur_request_by_id(request_id)
+        if not req or req[4] != "pending":
+            try:
+                await query.edit_message_text("⚠️ Cette demande a déjà été traitée ou n'existe plus.")
+            except TelegramError:
+                pass
+            return
+
+        target_uid = int(req[1])
+        if not set_user_role(target_uid, "vendeur"):
+            try:
+                await query.edit_message_text(
+                    f"❌ Impossible d'ajouter le rôle vendeur à <code>{target_uid}</code>.",
+                    parse_mode="HTML",
+                )
+            except TelegramError:
+                pass
+            return
+
+        if not set_vendeur_request_status(request_id, "accepted", user_id):
+            try:
+                await query.edit_message_text("❌ Erreur lors de la validation de la demande.")
+            except TelegramError:
+                pass
+            return
+
+        username_txt = f"@{escape_html(req[2])}" if req[2] else "—"
+        first_name_txt = escape_html((req[3] or "N/A")[:64])
+        await send_notification(
+            context.bot,
+            target_uid,
+            "✅ <b>Demande vendeur acceptée</b>\n\nVotre rôle vendeur a été activé.",
+            "HTML",
+        )
+        try:
+            await query.edit_message_text(
+                "✅ <b>Demande revendeur acceptée</b>\n\n"
+                f"🆔 Demande ID: <code>{request_id}</code>\n"
+                f"👤 User ID: <code>{target_uid}</code>\n"
+                f"📱 Username: {username_txt}\n"
+                f"📛 Prénom: {first_name_txt}\n"
+                f"🛡️ Traité par admin: <code>{user_id}</code>\n"
+                "📌 Statut: <b>ACCEPTÉE</b>",
+                parse_mode="HTML",
+            )
+        except TelegramError:
+            pass
+        logger.info(f"Demande revendeur acceptée: request_id={request_id}, user_id={target_uid}, admin={user_id}")
+        return
+
+    if callback_data.startswith("vendeur_demande_refuse_") and role == "admin":
+        try:
+            request_id = int(callback_data.split("_")[-1])
+        except (ValueError, IndexError):
+            request_id = None
+        if not request_id:
+            return
+
+        req = get_vendeur_request_by_id(request_id)
+        if not req or req[4] != "pending":
+            try:
+                await query.edit_message_text("⚠️ Cette demande a déjà été traitée ou n'existe plus.")
+            except TelegramError:
+                pass
+            return
+
+        target_uid = int(req[1])
+        if not set_vendeur_request_status(request_id, "refused", user_id):
+            try:
+                await query.edit_message_text("❌ Erreur lors du refus de la demande.")
+            except TelegramError:
+                pass
+            return
+
+        username_txt = f"@{escape_html(req[2])}" if req[2] else "—"
+        first_name_txt = escape_html((req[3] or "N/A")[:64])
+        await send_notification(
+            context.bot,
+            target_uid,
+            "❌ <b>Demande vendeur refusée</b>\n\nVotre demande n'a pas été retenue.",
+            "HTML",
+        )
+        try:
+            await query.edit_message_text(
+                "❌ <b>Demande revendeur refusée</b>\n\n"
+                f"🆔 Demande ID: <code>{request_id}</code>\n"
+                f"👤 User ID: <code>{target_uid}</code>\n"
+                f"📱 Username: {username_txt}\n"
+                f"📛 Prénom: {first_name_txt}\n"
+                f"🛡️ Traité par admin: <code>{user_id}</code>\n"
+                "📌 Statut: <b>REFUSÉE</b>",
+                parse_mode="HTML",
+            )
+        except TelegramError:
+            pass
+        logger.info(f"Demande revendeur refusée: request_id={request_id}, user_id={target_uid}, admin={user_id}")
+        return
+
     # Gestion de l'édition de l'annonce (texte)
     if callback_data == "config_annonce_text_edit" and role == "admin":
         message = (
@@ -7709,7 +8217,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                          "config_prix_carte_edit",
                          "config_payment_url_edit", "config_staff_channel_edit", "config_staff_thread_payment_edit", 
                          "config_staff_thread_entretien_edit",
-                         "config_staff_thread_demande_access_edit"} and role == "admin":
+                         "config_staff_thread_demande_access_edit",
+                         "config_staff_thread_demande_vendeur_edit"} and role == "admin":
         config_labels = {
             "config_min_edit": ("Minimum d'argent", "argent_min", "int"),
             "config_max_edit": ("Maximum d'argent", "argent_max", "int"),
@@ -7719,14 +8228,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "config_staff_channel_edit": ("ID du Canal Staff (commence par -)", "staff_channel_id", "str"),
             "config_staff_thread_payment_edit": ("ID du Thread Paiement (nombre)", "staff_thread_payment", "int"),
             "config_staff_thread_entretien_edit": ("ID du Thread Entretien (nombre)", "staff_thread_entretien", "int"),
-            "config_staff_thread_demande_access_edit": ("ID du Thread Demande d'accès (nombre)", "staff_thread_demande_access", "int")
+            "config_staff_thread_demande_access_edit": ("ID du Thread Demande d'accès (nombre)", "staff_thread_demande_access", "int"),
+            "config_staff_thread_demande_vendeur_edit": ("ID du Thread Demande vendeur (nombre)", "staff_thread_demande_vendeur", "int"),
         }
         
         label, key, value_type = config_labels[callback_data]
         
         # Valeur par défaut selon le type
         if value_type == "int":
-            if key in ["staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"]:
+            if key in ["staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access", "staff_thread_demande_vendeur"]:
                 current_value = get_config_value(key, "")
             elif key == "card_margin":
                 current_value = get_config_value(key, DEFAULT_CARD_MARGIN)
@@ -7762,7 +8272,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             back_callback = "config_points"
         elif key in ["card_margin", "prix_carte"]:
             back_callback = "config_carte"
-        elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"]:
+        elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access", "staff_thread_demande_vendeur"]:
             back_callback = "config_canal"
         else:
             back_callback = "cmd_config"
@@ -7859,7 +8369,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             message = f"📋 **Liste des utilisateurs**\n\nPage {page + 1}/{total_pages if total_pages > 0 else 1}\n\n"
             for uid, username, balance, user_role, reduction in users:
                 username_display = f"@{username}" if username else "N/A"
-                reduction_display = f" - {reduction}%" if reduction > 0 else ""
+                reduction_display = f" - réduc.Click {reduction}%" if reduction > 0 else ""
                 message += f"• {username_display} (`{uid}`) - {balance} pts - {user_role}{reduction_display}\n"
             
             keyboard = []
@@ -8173,9 +8683,6 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
         
         logger.info(f"Envoi de la preuve de paiement à l'admin pour la transaction {payment_id} (user_id={user_id}, argent={points}, price={price:.2f}€)")
         
-        # Récupérer la réduction de l'utilisateur pour afficher les détails
-        user_reduction = get_user_reduction(payment_user_id)
-        
         # Convertir price en float si c'est un Decimal (venant de PostgreSQL)
         price_float = float(price) if hasattr(price, '__float__') else price
         
@@ -8184,28 +8691,9 @@ async def photo_message_handler(update: Update, context: ContextTypes.DEFAULT_TY
             "📸 **Nouvelle preuve de paiement reçue**\n",
             f"👤 Utilisateur: {escape_markdown(str(user.first_name or 'N/A'))} (@{escape_markdown(str(user.username or 'N/A'))})",
             f"🆔 ID: `{payment_user_id}`",
-            f"💰 Argent: **{points}**"
+            f"💰 Argent: **{points}**",
+            f"💵 Montant déclaré: **{price_float:.2f} €**",
         ]
-        
-        # Ajouter les informations de réduction si applicable
-        if user_reduction > 0:
-            # Calculer le prix initial (prix avant réduction)
-            if user_reduction < 100:
-                # Inversion de la réduction appliquée
-                price_initial = price_float / (1 - user_reduction / 100)
-                price_initial = math.ceil(price_initial * 20) / 20
-            else:
-                # Réduction de 100%, le prix initial est celui des points sans réduction
-                base_price = points * get_price_per_point(points)
-                price_initial = math.ceil(base_price * 20) / 20
-            
-            admin_message_lines.extend([
-                f"💵 Prix avant réduction: **{price_initial:.2f} €**",
-                f"🎁 Réduction: **{user_reduction}%**",
-                f"💶 Montant final: **{price_float:.2f} €**"
-            ])
-        else:
-            admin_message_lines.append(f"💵 Montant: **{price_float:.2f} €**")
         
         admin_message_lines.extend([
             f"📅 Date: {created_at}",
@@ -8670,7 +9158,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                     f"👤 **Username:** {username_display}\n"
                     f"💎 **Points:** {user_info['points']} points\n"
                     f"🎭 **Rôle:** {role_display}\n"
-                    f"💰 **Réduction:** {reduction_rate}%\n"
+                    f"💰 **Réduction Click:** {reduction_rate}%\n"
                     f"📅 **Créé le:** {created_at_str}\n"
                     f"🔄 **Modifié le:** {updated_at_str}"
                 )
@@ -8716,10 +9204,10 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 current_reduction = user_info.get('reduction', 0)
                 context.user_data['reduction_user_id'] = user_id_to_edit
                 message = (
-                    f"💰 **Modifier la Réduction**\n\n"
+                    f"💰 **Modifier la réduction Click**\n\n"
                     f"👤 Utilisateur: `{user_id_to_edit}`\n"
-                    f"📊 Réduction actuelle: **{current_reduction}%**\n\n"
-                    "📝 Envoyez le nouveau taux de réduction (0-100, 2 décimales).\n\n"
+                    f"📊 Réduction Click actuelle: **{current_reduction}%**\n\n"
+                    "📝 Nouveau taux (0–100, 2 décimales), appliqué au total panier Click.\n\n"
                     "💡 Exemple: 30 ou 10.50"
                 )
                 keyboard = [[InlineKeyboardButton("❌ Annuler", callback_data="config_role")]]
@@ -8751,9 +9239,9 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 user_id_to_edit = context.user_data['reduction_user_id']
                 if set_user_reduction(user_id_to_edit, new_reduction):
                     await update.message.reply_text(
-                        f"✅ **Réduction modifiée !**\n\n"
+                        f"✅ **Réduction Click modifiée !**\n\n"
                         f"👤 Utilisateur: `{user_id_to_edit}`\n"
-                        f"💰 Nouvelle réduction: **{new_reduction}**%",
+                        f"💰 Nouveau taux: **{new_reduction}**%",
                         parse_mode="Markdown"
                     )
                     logger.info(f"Réduction modifiée pour l'utilisateur {user_id_to_edit} par l'admin {user_id}: {new_reduction}%")
@@ -8796,7 +9284,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 await update.message.reply_text(
                     f"✅ **Vendeur configuré !**\n\n"
                     f"👤 Vendeur: `{user_id_vendeur}`\n"
-                    f"💰 Réduction: **{reduction}%**",
+                    f"💰 Réduction Click: **{reduction}%**",
                     parse_mode="Markdown"
                 )
                 context.user_data.pop('vendeur_user_id', None)
@@ -8846,8 +9334,8 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                         message = (
                             f"✅ **Rôle ajouté !**\n\n"
                             f"{role_emoji} L'utilisateur `{user_id_to_add}` a maintenant le rôle **{role_type}**.\n\n"
-                            "💰 **Définir la réduction**\n\n"
-                            "📝 Envoyez le taux de réduction pour ce vendeur (0-100, 2 décimales).\n\n"
+                            "💰 **Réduction Click (panier)**\n\n"
+                            "📝 Envoyez le pourcentage (0–100, 2 décimales) appliqué au total panier Click.\n\n"
                             "💡 Exemple: 30 ou 10.50"
                         )
                         keyboard = [[InlineKeyboardButton("⏭️ Passer (0%)", callback_data="vendeur_reduction_skip")]]
@@ -9014,7 +9502,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 new_value = int(text)
                 # Pour les threads staff, on accepte n'importe quel entier (peut être négatif)
                 # Pour card_margin, on accepte seulement positif ou nul (0 = pas de marge)
-                if key not in ["staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"] and new_value < 0:
+                if key not in ["staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access", "staff_thread_demande_vendeur"] and new_value < 0:
                     await update.message.reply_text(
                         "❌ Erreur: La valeur doit être un nombre entier positif ou nul.\n"
                         "Veuillez réessayer ou annuler."
@@ -9069,7 +9557,7 @@ async def text_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                 back_callback = "config_points"
             elif key == "card_margin":
                 back_callback = "config_carte"
-            elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access"]:
+            elif key in ["staff_channel_id", "staff_thread_payment", "staff_thread_entretien", "staff_thread_demande_access", "staff_thread_demande_vendeur"]:
                 back_callback = "config_canal"
             else:
                 back_callback = "cmd_config"

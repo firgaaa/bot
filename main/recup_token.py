@@ -94,6 +94,7 @@ async def recup_token(
     email: str,
     numero: str,
     ddb: str,
+    bearer_token: Optional[str] = None,
     gender: Optional[str] = None,
     marketing_opt_in: bool = False,
     subscribe_channel: Optional[list] = None,
@@ -166,6 +167,8 @@ async def recup_token(
         "Accept-Encoding": "gzip, deflate, br",
         "Priority": "u=1, i",
     }
+    if bearer_token and str(bearer_token).strip():
+        headers["Authorization"] = f"Bearer {str(bearer_token).strip()}"
 
     last_error_code = ""
     last_error_msg = ""

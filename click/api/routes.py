@@ -454,7 +454,7 @@ def register_routes(app):
                 http_status=502,
             )
 
-        basket_data = basket.GetBasketById(session.basket_id)
+        basket_data = basket.GetBasketById(session.basket_id, session.account_token)
         if basket_data is None:
             return error_response(
                 ErrorCode.KFC_API_ERROR,
@@ -571,6 +571,7 @@ def register_routes(app):
             cost,
             quantity,
             modgrps,
+            session.account_token,
         )
         try:
             import json as _json
@@ -649,7 +650,7 @@ def register_routes(app):
         item_info = get_item_cost_quantity(session.id, item_id)
         cost_to_remove = (item_info[0] * item_info[1]) if item_info else 0
 
-        result = basket.RemoveLoyaltyItemFromBasket(session.basket_id, item_id)
+        result = basket.RemoveLoyaltyItemFromBasket(session.basket_id, item_id, session.account_token)
         if result is None:
             return error_response(
                 ErrorCode.KFC_API_ERROR,
@@ -753,7 +754,7 @@ def register_routes(app):
             )
 
         # Récupérer les articles du panier pour SubmitOrder
-        basket_data = basket.GetBasketById(session.basket_id)
+        basket_data = basket.GetBasketById(session.basket_id, session.account_token)
         if basket_data is None:
             return error_response(
                 ErrorCode.KFC_API_ERROR,
@@ -800,7 +801,11 @@ def register_routes(app):
             "status": "SUBMITTED",
             "confirmation_url": f"https://kfc.fr/confirmation-de-commande/{order_uuid}",
             "history_id": history_id,
+            # Token KFC utilisé par la session Click (conservé pour usage côté bot)
+            "secondary_token": session.account_token,
         }
+        if user_info:
+            payload["secondary_token"] = user_info.get("token") or session.account_token
         if session:
             payload["email"] = session.email
             payload["phone_number"] = session.phone_number

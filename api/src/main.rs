@@ -34,6 +34,7 @@ async fn main() -> std::io::Result<()> {
             .service(api::update::update_kfc_account)
             .service(api::generate::generate_kfc)
             .service(api::get_old::get_old_kfc)
+            .service(api::maj::maj_kfc)
     });
     log::info!("Starting server on port {}", port);
     server.bind(("0.0.0.0", port))?.run().await

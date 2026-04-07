@@ -507,6 +507,7 @@ dependencies = [
  "lazy_static",
  "log",
  "serde",
+ "serde_json",
  "thiserror",
  "tokio",
  "wreq",

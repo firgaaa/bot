@@ -32,15 +32,19 @@ pub async fn update_kfc_account(
         email: kfc_account.email,
         password: kfc_account.password,
         nom: kfc_account.nom,
+        bearer_token: kfc_account.bearer_token,
         point: kfc_account.point,
         expired_at: kfc_account.expired_at,
         prenom: kfc_account.prenom,
         numero: kfc_account.numero,
         ddb: kfc_account.ddb,
     };
-    diesel::update(kfc_storage.filter(customer_id.eq(&kfc_account.customer_id)))
+    let affected_rows = diesel::update(kfc_storage.filter(customer_id.eq(&kfc_account.customer_id)))
         .set(&set)
         .execute(conn)?;
+    if affected_rows == 0 {
+        return Err(diesel::result::Error::NotFound);
+    }
     Ok(())
 }
 
@@ -60,4 +64,17 @@ pub async fn get_old_kfc_accounts(
         .limit(limit_count)
         .load::<model::Kfc>(conn)?;
     Ok(results)
+}
+
+/// Met à jour uniquement `point` pour une ligne identifiée par `customer_id`.
+/// Retourne le nombre de lignes affectées (0 si aucune ligne).
+pub async fn update_kfc_point_only(
+    conn: &mut diesel::PgConnection,
+    cust_id: &str,
+    new_points: i32,
+) -> Result<usize, diesel::result::Error> {
+    use crate::schema::kfc_storage::dsl::*;
+    diesel::update(kfc_storage.filter(customer_id.eq(cust_id)))
+        .set(point.eq(Some(new_points)))
+        .execute(conn)
 }

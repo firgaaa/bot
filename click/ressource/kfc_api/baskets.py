@@ -3,7 +3,11 @@ from .helper import HTTPGet, HTTPPost, HTTPPut, HTTPOptions
 
 import requests
 
-def CreateBasket(storeId: str):
+def _auth_header(userToken: str = None) -> str:
+    token = str(userToken or "").strip()
+    return f"Bearer {token}" if token else ""
+
+def CreateBasket(storeId: str, userToken: str = None):
     url = "https://api.kfc.fr/baskets"
 
     headers = {
@@ -20,6 +24,7 @@ def CreateBasket(storeId: str):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
+        "Authorization": _auth_header(userToken),
         "user-agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -46,7 +51,7 @@ def CreateBasket(storeId: str):
     
     return r.json()
 
-def GetBasketInfo(basketUUID):
+def GetBasketInfo(basketUUID, userToken: str = None):
     url = f"https://api.kfc.fr/baskets/{basketUUID}"
 
     headers = {
@@ -62,6 +67,7 @@ def GetBasketInfo(basketUUID):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
+        "Authorization": _auth_header(userToken),
         "user-agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -78,7 +84,7 @@ def GetBasketInfo(basketUUID):
     return r.json()
 
 
-def AddLoyaltyItem(basketUUID, loyaltyId: str, loyaltyPrice, quantity: int, modgrps=[]):
+def AddLoyaltyItem(basketUUID, loyaltyId: str, loyaltyPrice, quantity: int, modgrps=[], userToken: str = None):
 
     url = f"https://api.kfc.fr/baskets/{basketUUID}/items"
 
@@ -96,6 +102,7 @@ def AddLoyaltyItem(basketUUID, loyaltyId: str, loyaltyPrice, quantity: int, modg
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
+        "Authorization": _auth_header(userToken),
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0"
     }
 
@@ -118,7 +125,7 @@ def AddLoyaltyItem(basketUUID, loyaltyId: str, loyaltyPrice, quantity: int, modg
 
     return r.json()
 
-def RemoveLoyaltyItem(basketUUID: str, itemId: str):
+def RemoveLoyaltyItem(basketUUID: str, itemId: str, userToken: str = None):
 
     url = f"https://api.kfc.fr/baskets/{basketUUID}/items/{itemId}"
 
@@ -136,6 +143,7 @@ def RemoveLoyaltyItem(basketUUID: str, itemId: str):
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "same-site",
+        "Authorization": _auth_header(userToken),
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0"
     }
 
@@ -155,7 +163,7 @@ def RemoveLoyaltyItem(basketUUID: str, itemId: str):
     return r.json()
     
 
-def AssociateToAccount(basketUUID: str, userUUID: str, firstName: str, lastName: str, phoneNumber: str, email: str):
+def AssociateToAccount(basketUUID: str, userUUID: str, firstName: str, lastName: str, phoneNumber: str, email: str, userToken: str = None):
     url = f"https://api.kfc.fr/baskets/{basketUUID}"
 
     headers = {
@@ -169,6 +177,7 @@ def AssociateToAccount(basketUUID: str, userUUID: str, firstName: str, lastName:
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-site",
+        "Authorization": _auth_header(userToken),
         "Priority": "u=0",
         "Te": "trailers",
     }

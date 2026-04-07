@@ -16,7 +16,7 @@ def CheckoutBasket(basketUUID: str, userToken:str=None):
     Returns:
         Bool: True if no error happened, False else.
     """
-    basketJson = GetBasketById(basketUUID)
+    basketJson = GetBasketById(basketUUID, userToken)
     if basketJson == None:
         print(f"[-] GetBasket Error")
         return None
@@ -68,7 +68,15 @@ def SubmitOrder(basketUUID, basketItems, userUUID, userToken=None, user_info=Non
 
 
     
-    code = baskets.AssociateToAccount(basketUUID, userId, firstName, lastName, phoneNumber, email)
+    code = baskets.AssociateToAccount(
+        basketUUID,
+        userId,
+        firstName,
+        lastName,
+        phoneNumber,
+        email,
+        userToken=userToken,
+    )
     if code == None:
         print(f"[-] AssociateToAccount Error")
         return None, None
@@ -98,7 +106,7 @@ def SubmitOrder(basketUUID, basketItems, userUUID, userToken=None, user_info=Non
     code = users.SendUILog(f"UI - Order Confirmation paged viewed for Order hash - {orderUUID}", userToken) #Web
     #print(f"[{code}] UI - Order Confirmation paged viewed for Order hash - {orderUUID}") #Web
 
-    basket = GetBasketById(basketUUID)
+    basket = GetBasketById(basketUUID, userToken)
     if basket == None:
         print(f"[-] GetBasketById Error")
         return None, None
@@ -123,7 +131,7 @@ def CheckinOrder(orderUUID, userToken=None): #When you're ready/near restaurant
     Returns:
         Bool: True if no error happened, False else.
     """
-    Order = orders.GetOrder(orderUUID)
+    Order = orders.GetOrder(orderUUID, userToken)
     if Order == None:
         print(f"[-] GetOrder Error")
         return None

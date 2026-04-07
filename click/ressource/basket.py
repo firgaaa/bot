@@ -3,7 +3,7 @@ from typing import Optional
 
 
 
-def NewBasket(storeId: str) -> Optional[str]:
+def NewBasket(storeId: str, userToken: str = None) -> Optional[str]:
     """
     Create a new basket for the specified store and return its ID.
 
@@ -16,7 +16,7 @@ def NewBasket(storeId: str) -> Optional[str]:
         basketUUID (str | None): The basket's UUID, or None if an error occurred.
     """
     
-    basket = baskets.CreateBasket(storeId)
+    basket = baskets.CreateBasket(storeId, userToken)
     if basket == None:
         return None
 
@@ -24,7 +24,7 @@ def NewBasket(storeId: str) -> Optional[str]:
 
 
 
-def GetBasketById(basketUUID: str) -> Optional[dict]:
+def GetBasketById(basketUUID: str, userToken: str = None) -> Optional[dict]:
     """
     Retrieve informations about the given basket via the API.
 
@@ -37,7 +37,7 @@ def GetBasketById(basketUUID: str) -> Optional[dict]:
         apiResponse (Optional[dict]): The response of the api, or None if an error occurred.
     """
 
-    basket = baskets.GetBasketInfo(basketUUID)
+    basket = baskets.GetBasketInfo(basketUUID, userToken)
     if basket == None:
         return None
 
@@ -45,7 +45,14 @@ def GetBasketById(basketUUID: str) -> Optional[dict]:
 
 
 
-def AddLoyaltyItemToBasket(basketUUID:str, loyaltyId: str, loyaltyPrice: int, quantity: int, modgrps: list[dict]=[]) -> Optional[dict]:
+def AddLoyaltyItemToBasket(
+    basketUUID: str,
+    loyaltyId: str,
+    loyaltyPrice: int,
+    quantity: int,
+    modgrps: list[dict] = [],
+    userToken: str = None,
+) -> Optional[dict]:
     """
     Add the specified item to the given basket via the API.
 
@@ -62,14 +69,21 @@ def AddLoyaltyItemToBasket(basketUUID:str, loyaltyId: str, loyaltyPrice: int, qu
         apiResponse (dict): The response of the api (should be a dict containing added item's information), or None if an error occurred.
     """
 
-    r = baskets.AddLoyaltyItem(basketUUID, loyaltyId, loyaltyPrice, quantity, modgrps)
+    r = baskets.AddLoyaltyItem(
+        basketUUID,
+        loyaltyId,
+        loyaltyPrice,
+        quantity,
+        modgrps,
+        userToken=userToken,
+    )
     
     if r == None:
         return None
 
     return r
 
-def RemoveLoyaltyItemFromBasket(basketUUID: str, itemUUID: str) -> Optional[dict]: #You 
+def RemoveLoyaltyItemFromBasket(basketUUID: str, itemUUID: str, userToken: str = None) -> Optional[dict]: #You 
     """
     Remove the specified item from the given basket via the API.
 
@@ -83,7 +97,7 @@ def RemoveLoyaltyItemFromBasket(basketUUID: str, itemUUID: str) -> Optional[dict
         apiResponse (list[tuple[str, str]]): The response of the api (should be a empty dict in this case), or None if an error occurred.
     """
 
-    r = baskets.RemoveLoyaltyItem(basketUUID, itemUUID)
+    r = baskets.RemoveLoyaltyItem(basketUUID, itemUUID, userToken=userToken)
     
     if r == None:
         return None

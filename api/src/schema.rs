@@ -115,6 +115,7 @@ diesel::table! {
         numero -> Nullable<Varchar>,
         #[max_length = 50]
         ddb -> Nullable<Varchar>,
+        bearer_token -> Nullable<Text>,
     }
 }
 
@@ -162,51 +163,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    sessions (id) {
-        id -> Int4,
-        #[max_length = 255]
-        account_id -> Varchar,
-        account_token -> Text,
-        #[max_length = 255]
-        store_id -> Varchar,
-        #[max_length = 255]
-        store_name -> Nullable<Varchar>,
-        #[max_length = 255]
-        store_city -> Nullable<Varchar>,
-        #[max_length = 255]
-        basket_id -> Nullable<Varchar>,
-        #[max_length = 255]
-        order_uuid -> Nullable<Varchar>,
-        #[max_length = 50]
-        order_number -> Nullable<Varchar>,
-        #[max_length = 50]
-        status -> Varchar,
-        created_at -> Nullable<Timestamptz>,
-        updated_at -> Nullable<Timestamptz>,
-        balance_user -> Int4,
-        balance_basket -> Int4,
-        #[max_length = 255]
-        telegram_user -> Nullable<Varchar>,
-        #[max_length = 255]
-        panier_id -> Varchar,
-        #[max_length = 255]
-        telegram_id -> Nullable<Varchar>,
-        #[max_length = 255]
-        email -> Nullable<Varchar>,
-        #[max_length = 100]
-        phone_number -> Nullable<Varchar>,
-        #[max_length = 255]
-        last_name -> Nullable<Varchar>,
-        #[max_length = 255]
-        first_name -> Nullable<Varchar>,
-        date_of_birth -> Nullable<Date>,
-    }
-}
-
-diesel::table! {
     users (user_id) {
         user_id -> Int8,
         points -> Numeric,
+        minimum_argent_solde -> Numeric,
         #[max_length = 50]
         role -> Nullable<Varchar>,
         created_at -> Timestamp,
@@ -221,10 +181,26 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(card_purchase_history -> users (user_id));
+diesel::table! {
+    vendeur_requests (id) {
+        id -> Int4,
+        user_id -> Int8,
+        #[max_length = 255]
+        username -> Nullable<Varchar>,
+        #[max_length = 255]
+        first_name -> Nullable<Varchar>,
+        #[max_length = 20]
+        status -> Varchar,
+        nb_tentatives -> Int4,
+        reviewed_by -> Nullable<Int8>,
+        reviewed_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(click_order_history_items -> click_order_history (history_id));
 diesel::joinable!(pending_payments -> users (user_id));
-diesel::joinable!(session_items -> sessions (session_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     card_purchase_history,
@@ -235,6 +211,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     nouveau_user,
     pending_payments,
     session_items,
-    sessions,
     users,
+    vendeur_requests,
 );

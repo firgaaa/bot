@@ -40,7 +40,7 @@ def create_session(
             if not basket_id and create_basket:
                 try:
                     from ressource import basket
-                    basket_id = basket.NewBasket(store_id)
+                    basket_id = basket.NewBasket(store_id, account_token)
                 except Exception:
                     basket_id = None
                 if not basket_id:

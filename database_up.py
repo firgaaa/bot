@@ -156,8 +156,10 @@ def ensure_bot_tables() -> tuple[bool, str]:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     user_id BIGINT PRIMARY KEY,
-                    points DECIMAL(12,2) NOT NULL DEFAULT 0 CHECK (points >= 0),
+                    points DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    minimum_argent_solde DECIMAL(12,2) NOT NULL DEFAULT 0,
                     role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'vendeur', 'moderator')),
+                    CHECK (points >= minimum_argent_solde),
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
@@ -185,6 +187,7 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 ("reduction", "DECIMAL(5,2) DEFAULT 0 CHECK (reduction >= 0 AND reduction <= 100)"),
                 ("token_publique", "VARCHAR(64) DEFAULT ''"),
                 ("token_prive", "VARCHAR(64) DEFAULT ''"),
+                ("minimum_argent_solde", "DECIMAL(12,2) NOT NULL DEFAULT 0"),
             ]:
                 cur.execute("""
                     DO $$ BEGIN
@@ -233,10 +236,19 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 END $$;
             """)
 
-            # Contraintes: points >= 0
+            # Contraintes: points >= minimum_argent_solde
             cur.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_points_check;")
             cur.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_argent_check;")
-            cur.execute("ALTER TABLE users ADD CONSTRAINT users_points_check CHECK (points >= 0);")
+            cur.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_points_minimum_check;")
+            cur.execute("ALTER TABLE users ADD CONSTRAINT users_points_minimum_check CHECK (points >= minimum_argent_solde);")
+
+            # Migration: appliquer le minimum revendeur par défaut si non défini.
+            cur.execute("""
+                UPDATE users
+                SET minimum_argent_solde = -30
+                WHERE COALESCE(role, 'user') = 'vendeur'
+                  AND COALESCE(minimum_argent_solde, 0) = 0
+            """)
 
             # Migration: supprimer les anciennes colonnes obsolètes
             cur.execute("ALTER TABLE users DROP COLUMN IF EXISTS argent;")
@@ -332,6 +344,33 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 )
             """)
 
+            # --- vendeur_requests (demandes d'admission revendeur) ---
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS vendeur_requests (
+                    id SERIAL PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    username VARCHAR(255),
+                    first_name VARCHAR(255),
+                    status VARCHAR(20) NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'accepted', 'refused')),
+                    nb_tentatives INTEGER NOT NULL DEFAULT 1,
+                    reviewed_by BIGINT,
+                    reviewed_at TIMESTAMP,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_vendeur_requests_user_created
+                ON vendeur_requests (user_id, created_at DESC)
+            """)
+            cur.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uniq_vendeur_requests_pending_user
+                ON vendeur_requests (user_id)
+                WHERE status = 'pending'
+            """)
+
             # --- card_purchase_history ---
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS card_purchase_history (
@@ -372,6 +411,7 @@ def ensure_bot_tables() -> tuple[bool, str]:
                 ("staff_thread_payment", _get_env_config("CONFIG_STAFF_THREAD_PAYMENT", "")),
                 ("staff_thread_entretien", _get_env_config("CONFIG_STAFF_THREAD_ENTRETIEN", "")),
                 ("staff_thread_demande_access", _get_env_config("CONFIG_STAFF_THREAD_DEMANDE_ACCESS", "")),
+                ("staff_thread_demande_vendeur", _get_env_config("CONFIG_STAFF_THREAD_DEMANDE_VENDEUR", "")),
                 ("emergency_stop", _get_env_config("CONFIG_EMERGENCY_STOP", "false").lower()),
                 ("announcement_text", _get_env_config("CONFIG_ANNOUNCEMENT_TEXT", "")),
                 ("announcement_photo", _get_env_config("CONFIG_ANNOUNCEMENT_PHOTO", "")),

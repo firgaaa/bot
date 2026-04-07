@@ -1,6 +1,10 @@
 from .helper import HTTPGet, HTTPPost, HTTPPut
 from . import COOKIES
 
+def _auth_header(userToken: str = None) -> str:
+    token = str(userToken or "").strip()
+    return f"Bearer {token}" if token else ""
+
 def GetUserInfo(userUUID: str, userToken: str=None):
 
     url = f"https://www.kfc.fr/api/users/{userUUID}"
@@ -12,8 +16,7 @@ def GetUserInfo(userUUID: str, userToken: str=None):
         "Accept-Encoding": "gzip, deflate, br",
         "Referer": "https://www.kfc.fr/paiement",
         "Culturecode": "fr",
-        #"Authorization": f"Bearer {userToken}",
-        "Authorization": "",
+        "Authorization": _auth_header(userToken),
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
@@ -36,11 +39,10 @@ def GetUserInfo(userUUID: str, userToken: str=None):
 def GetUserLoyaltyInfo(userUUID: str, userToken: str=None):
     url = f"https://www.kfc.fr/api/users/{userUUID}/loyaltyinfo"
 
-    auth_header = f"Bearer {userToken}" if (userToken and str(userToken).strip()) else ""
     headers = {
         "accept": "application/json, text/plain, */*",
         "accept-language": "fr,fr-FR;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-        "Authorization": auth_header,
+        "Authorization": _auth_header(userToken),
         "cache-control": "no-cache",
         "culturecode": "fr",
         "pragma": "no-cache",
@@ -75,8 +77,7 @@ def GetUserLoyaltyPointsExpireDateInfo(userUUID: str, userToken: str=None):
     headers = {
         "accept": "application/json, text/plain, */*",
         "accept-language": "fr,fr-FR;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-        #"Authorization": f"Bearer {userToken}",
-        "Authorization": "",
+        "Authorization": _auth_header(userToken),
         "cache-control": "no-cache",
         "culturecode": "fr",
         "pragma": "no-cache",
@@ -118,8 +119,7 @@ def SendUILog(message: str, userToken: str=None):
         "Referer": "https://www.kfc.fr/paiement",
         "Culturecode": "fr",
         "Content-Type": "application/json",
-        #"Authorization": f"Bearer {userToken}",
-        "Authorization": "",
+        "Authorization": _auth_header(userToken),
         "Origin": "https://www.kfc.fr",
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
@@ -154,8 +154,7 @@ def RegisterBasket(userId: str, basketId: str, firstName, lastName, phoneNumber,
         "Referer": "https://www.kfc.fr/prise-de-commande",
         "Culturecode": "fr",
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {userToken}",
-        #"Authorization": "",
+        "Authorization": _auth_header(userToken),
         "Origin": "https://www.kfc.fr",
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",

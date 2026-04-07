@@ -15,6 +15,7 @@ pub struct AddKfcStorage {
     email: Option<String>,
     password: Option<String>,
     nom: Option<String>,
+    bearer_token: Option<String>,
     point: i32,
     expired_at: Option<chrono::NaiveDateTime>,
     prenom: Option<String>,
@@ -30,6 +31,7 @@ pub struct UpdateKfcStorage {
     pub email: Option<String>,
     pub password: Option<String>,
     pub nom: Option<String>,
+    pub bearer_token: Option<String>,
     pub point: Option<i32>,
     pub expired_at: Option<chrono::NaiveDateTime>,
     pub prenom: Option<String>,
@@ -45,6 +47,7 @@ pub struct UpdateKfcStorageSet {
     pub email: Option<String>,
     pub password: Option<String>,
     pub nom: Option<String>,
+    pub bearer_token: Option<String>,
     pub point: Option<i32>,
     pub expired_at: Option<chrono::NaiveDateTime>,
     pub prenom: Option<String>,
@@ -55,16 +58,17 @@ pub struct UpdateKfcStorageSet {
 #[diesel(table_name = kfc_storage)]
 pub struct Kfc {
     #[serde(rename = "customerId")]
-    customer_id: String,
-    id: Option<String>,
-    carte: String,
-    email: Option<String>,
-    nom: Option<String>,
-    point: Option<i32>,
-    expired_at: Option<chrono::NaiveDateTime>,
-    prenom: Option<String>,
-    numero: Option<String>,
-    ddb: Option<String>,
+    pub customer_id: String,
+    pub id: Option<String>,
+    pub carte: String,
+    pub email: Option<String>,
+    pub nom: Option<String>,
+    pub bearer_token: Option<String>,
+    pub point: Option<i32>,
+    pub expired_at: Option<chrono::NaiveDateTime>,
+    pub prenom: Option<String>,
+    pub numero: Option<String>,
+    pub ddb: Option<String>,
 }
 pub async fn generate_kfc_storage(
     conn: &mut diesel::PgConnection,
@@ -100,7 +104,7 @@ pub async fn generate_kfc_storage(
         for mut acc in accounts.clone() {
             // recheck each account
             let response = match acc.id.as_ref() {
-                Some(acc_id) => recheck_kfc_accounts(acc_id).await,
+                Some(acc_id) => recheck_kfc_accounts(acc_id, acc.bearer_token.as_deref()).await,
                 None => continue,  // ne devrait pas arriver grâce au filter id.is_not_null()
             };
             match response {

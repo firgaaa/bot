@@ -1,6 +1,10 @@
 from .helper import HTTPGet, HTTPPost, HTTPPut
 from . import COOKIES
 
+def _auth_header(userToken: str = None) -> str:
+    token = str(userToken or "").strip()
+    return f"Bearer {token}" if token else ""
+
 def SendCheckin(orderUUID: str, userToken=None):
     url = f"https://www.kfc.fr/api/order/{orderUUID}/checkin"
 
@@ -13,8 +17,7 @@ def SendCheckin(orderUUID: str, userToken=None):
         "Referer": f"https://www.kfc.fr/confirmation-de-commande/{orderUUID}",
         "Culturecode": "fr",
         "Content-Type": "application/json",
-        #"Authorization": f"Bearer {userToken}",
-        "Authorization": "",
+        "Authorization": _auth_header(userToken),
         "Origin": "https://www.kfc.fr",
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
@@ -38,7 +41,7 @@ def SendCheckin(orderUUID: str, userToken=None):
 
     return r.json()
 
-def GetOrder(orderId: str):
+def GetOrder(orderId: str, userToken: str = None):
     url = f"https://api.kfc.fr/orders/{orderId}"
 
     headers = {
@@ -51,6 +54,7 @@ def GetOrder(orderId: str):
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-site",
+        "Authorization": _auth_header(userToken),
         "Te": "trailers",
     }
 
